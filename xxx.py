@@ -10,17 +10,42 @@ class A(Base):
         Base.__init__(self,n)
         self.m = m
     
-    AAA = "dddddddddd\n"
+    AAA = "dddd"
 
     def foo(self):
         print(self.AAA)
+        return self.AAA
 
     def goo(self):
         self.foo()
 
-a = A("nn","mm")
-a.foo()
-a.goo()
+
+import unittest
+
+
+class TestClassVarAndInstanceVar(unittest.TestCase):
+
+    def setUp(self):
+        pass
+    
+    def test_constructor_chain(self):
+
+        a = A(10,20)
+        self.assertTrue( a.n == 10 )        
+        self.assertTrue( a.m == 20 )
+        
+    def test_classvariable_blinding(self):
+
+        a = A(10,20)
+        self.assertTrue( a.AAA == "dddd" )
+        self.assertTrue( a.foo() == "dddd" )
+        a.AAA = "aaaa"
+        self.assertTrue( a.AAA == "aaaa" )
+        self.assertTrue( a.foo() == "aaaa" )
+
+        
+if __name__ == '__main__':
+    unittest.main()        
 
 
 
