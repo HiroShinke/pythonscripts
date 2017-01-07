@@ -19,6 +19,16 @@ class A(Base):
     def goo(self):
         self.foo()
 
+    def func():
+        return "bbbb"
+    
+    def ioo(self):
+        return A.func()
+
+    @classmethod
+    def meth(cls):
+        return "cccc"
+    
     hoo = foo
 
 
@@ -44,8 +54,21 @@ class TestClassVarAndInstanceVar(unittest.TestCase):
         a.AAA = "aaaa"
         self.assertTrue( a.AAA == "aaaa" )
         self.assertTrue( a.foo() == "aaaa" )
-        self.assertTrue( a.hoo() == "aaaa" )
-        
+
+    def test_aliasing(self):       
+        a = A(10,20)
+        self.assertTrue( a.hoo() == "dddd" ) 
+
+    def test_function(self):       
+        a = A(10,20)
+        self.assertTrue( a.ioo() == "bbbb" )
+        self.assertTrue( A.func() == "bbbb" )
+
+    def test_classmethod(self):
+        a = A(10,20)
+        self.assertTrue( a.meth() == "cccc" )
+        self.assertTrue( A.meth() == "cccc" )
+
 if __name__ == '__main__':
     unittest.main()        
 
