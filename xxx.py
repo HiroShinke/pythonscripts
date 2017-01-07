@@ -35,7 +35,7 @@ class A(Base):
 import unittest
 
 
-class TestClassVarAndInstanceVar(unittest.TestCase):
+class TestClassDefinition(unittest.TestCase):
 
     def setUp(self):
         pass
@@ -69,6 +69,15 @@ class TestClassVarAndInstanceVar(unittest.TestCase):
         self.assertTrue( a.meth() == "cccc" )
         self.assertTrue( A.meth() == "cccc" )
 
+    def test_dynamic_method_creation(self):
+        a = A(10,20)
+        def func(self):
+            return "zzzz"
+        setattr(A, "hoo", func)
+        A.joo = func
+        self.assertTrue( a.hoo() == "zzzz" )
+        self.assertTrue( a.joo() == "zzzz" )
+        
 if __name__ == '__main__':
     unittest.main()        
 
