@@ -115,9 +115,31 @@ def pEof():
     return pNotFollowdBy(pAny)
 
 def token(p):
-    return pU( pDo( pK( pR("\s*") ), p ))
+    return pU( pD( pK( pR("\s*") ), p ))
 
-def pDo(*ps):
+def pRef(lazy):
+    p = None
+    def parse(s):
+        if p == None:
+            p = lazy.call()
+        p(s)
+    return parse
+  
+def pOk(v):
+    def parse(s):
+        return (SUCCESS,s,v)
+    return parse
+
+def pFail(str):
+    def parse(s):
+        if str != None:
+            print(str)
+        return (FAILED,s)
+    return parse
+
+# D is for "do"
+# the 'monadic' sequence of parsers
+def pD(*ps):
     def parse(s):
         ret = []
         for p in ps:
@@ -130,6 +152,101 @@ def pDo(*ps):
                 return (FAILED,s)
         return (SUCCESS,s,*ret)
     return parse
+
+# M is for many
+# zero or more occurence of p
+def pM(p):
+    def parse(s):
+        ret = []
+        while True:
+            success,s0,*w = p(s)
+            if success:
+                ret.append(*w)
+                s = s0
+            else:
+                break
+        return (SUCCESS,s,*ret)
+    return parse
+
+# 1 or more
+def pM1(p):
+    return pD(p,pM(p))
+
+##### manyTill
+# zero or more p ended by endFunc
+def pMT (p,endFunc):
+    def parse(s):
+        ret = []
+        while True:
+            success,s0,*w = endFunc(s)
+            if success:
+                return (SUCCESS,s0,*ret)
+            else:
+                if s0 != s:
+                    return (FAILE,s0)
+                success,s1,*w = p(s0)
+                if success:
+                    s = s1
+                    ret.append(*w)
+                else:
+                    return (FAILED,s1)
+    return parse
+                
+##### 1 or more p separated by sep
+def pSepBy1(p,sep):
+    return pD( p,
+               pM( pD(pK(sep), p) ) )
+
+def pSepBy(p,sep):
+    return pOpt( pSepBy1(p,sep) )
+
+
+##### 1 or more p separated by sep
+# return (p,sep,....,p,sep,p)
+def pWithSep1(p,sep):
+    return pD( p, pM(pD(sep, p)) )
+
+def pWithSep(p,sep):
+    return pOpt( pWithSep1(p,sep) )
+
+##### zero or more p separated by and ended by sep
+# return (p,...)
+def pEndBy(p,endFunc):
+    return pM( pD(p, pK(endFunc) ) )
+
+##### 1 or more p separated by and ended by sep 
+# return (p,...)
+def pEndBy1(p,endFunc):
+    return pM1( pD(p, pK(endFunc) ) )
+
+# 1 or more p separated by sep ,
+# and optionaly ended by sep
+# return (p,...)
+def pSepEndBy1(p,sep):
+    def parse(s):
+        ok = False
+        ret = []
+        while True:
+            success,s,*w = p(s)
+            if success:
+                ret.append(*w)
+                ok = True
+                success,s = sep(s)
+                if success:
+                    pass
+                else:
+                    break
+            else:
+                break
+        if ok:
+            return (SUCCESS,s,*ret)
+        else:
+            return (FAILED,s)
+    return parse
+
+# zero or more
+def pSepEndBy(p,sep):
+    return pO( pSepEndBy1(p,sep), pK(sep) )
 
 def pChain(p,op,evalFunc):
 
@@ -157,7 +274,7 @@ def pChain(p,op,evalFunc):
             return (FAILED,s)
     return parse
 
-def pAction(p,func):
+def pA(p,func):
 
     def parse(s):
         success,s,*w = p(s)
@@ -178,7 +295,40 @@ def pDebug(label,p):
         print("label=" + label + " FAILED")
         return (FAILED,s0)
     return parse
-    
+
+# F is for filter
+def pF(p,func):
+    def parse(s):
+        success,s0,*w = p(s)
+        if success:
+            if func(*w):
+                return (SUCCESS,s0,*w)
+            else:
+                return (FAILED,s)
+        else:
+            return (FAILED,s0)
+    return parse
+
+# L is for label
+def pL (str,p):
+    def parse(s):
+        success,s0,*w = p(s)
+        if success:
+            return (SUCCESS,s0,[str,[*w]])
+        else:
+            return (FAILED,s0)
+    return parse
+
+# K is for skip
+def pK (p):
+    def parse(s):
+        success,s0,_ = p(s)
+        if success:
+            return (SUCCESS,s0)
+        else:
+            return (FAILED,s0)
+    return parse
+
 def pCr1(p,op):
 
     def evalStack(values,ops):
@@ -278,18 +428,34 @@ def pU(p):
             return (FAILED,s)
     return parse
 
+a    = pA
+r    = pRef
+para = pP
+f    = pF
+k    = pK
+l    = pL
+m    = pM
+u    = pU
+o    = pO
+d    = pD
+c    = pCl1
+opt  = pOpt
+sb   = pSepBy
+sb1  = pSepBy1
+ws   = pWithSep
+ws1  = pWithSep1
 
 def word(str):
-    return pDebug(str,pAction(pS(str), lambda s: s.word))
+    return a(pS(str), lambda s: s.word)
 
 def digit():
-    return pAction(pR("\d+"), lambda s: int(s.word))
+    return a(pR("\d+"), lambda s: int(s.word))
 
-p = pDo(word("a"),word("b"),word("c"))
+p = d(word("a"),word("b"),word("c"))
 print( runParser(p,"abcde") )
 
-p = pCl1(digit(),
-         pAction(pS("+"), lambda _: (lambda n,m: n+m)))
+p = c(digit(),
+      a(pS("+"), lambda _: (lambda n,m: n+m)))
 
 print( runParser(p,"1+2") )
 
