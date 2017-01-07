@@ -19,6 +19,8 @@ class A(Base):
     def goo(self):
         self.foo()
 
+    hoo = foo
+
 
 import unittest
 
@@ -42,7 +44,7 @@ class TestClassVarAndInstanceVar(unittest.TestCase):
         a.AAA = "aaaa"
         self.assertTrue( a.AAA == "aaaa" )
         self.assertTrue( a.foo() == "aaaa" )
-
+        self.assertTrue( a.hoo() == "aaaa" )
         
 if __name__ == '__main__':
     unittest.main()        
