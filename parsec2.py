@@ -50,7 +50,7 @@ def pChar(pred):
     def parse(s):
         if s.isEos:
             w = pred(s)
-            if w:
+            if w != None:
                 return (SUCCESS,
                         s.forwardPos(len(w)),
                         Token(w,
@@ -115,7 +115,7 @@ def pEof():
     return pNotFollowdBy(pAny)
 
 def token(p):
-    return pU( pD( pK( pR("\s*") ), p ))
+    return pU( pD( pK( pR("""\s*""") ), p ))
 
 def pRef(lazy):
     p = None
@@ -143,11 +143,10 @@ def pD(*ps):
     def parse(s):
         ret = []
         for p in ps:
-            print(s.curstr())
             success,s,*w = p(s)
-            print(*w)
             if success:
-                ret.append(*w)
+                for v in w:
+                    ret.append(v)
             else:
                 return (FAILED,s)
         return (SUCCESS,s,*ret)
@@ -322,7 +321,7 @@ def pL (str,p):
 # K is for skip
 def pK (p):
     def parse(s):
-        success,s0,_ = p(s)
+        success,s0,*_ = p(s)
         if success:
             return (SUCCESS,s0)
         else:
@@ -382,7 +381,7 @@ def pOpt(p):
 # notFollowedBy
 def pNotFolloedBy(p):
     def parse(s):
-        success,_ = p(s)
+        success,*_ = p(s)
         if not success:
             return (SUCCESS,s)
         else:
@@ -391,7 +390,7 @@ def pNotFolloedBy(p):
 # lookAhead
 def pLookAhead(p):
     def parse(s):
-        success,s0,_ = p(s)
+        success,s0,*_ = p(s)
         if success:
             return (SUCCESS,s)
         else:
@@ -445,18 +444,49 @@ sb1  = pSepBy1
 ws   = pWithSep
 ws1  = pWithSep1
 
-def word(str):
-    return a(pS(str), lambda s: s.word)
 
-def digit():
-    return a(pR("\d+"), lambda s: int(s.word))
+if __name__ == "__main__":
+    
+    import unittest
 
-p = d(word("a"),word("b"),word("c"))
-print( runParser(p,"abcde") )
+    def word(str):
+        return a(token(pS(str)), lambda s: s.word)
+    
+    def digit():
+        return a(token(pR("""\d+""")), lambda s: int(s.word))
 
-p = c(digit(),
-      a(pS("+"), lambda _: (lambda n,m: n+m)))
+    class XXXX(unittest.TestCase):
 
-print( runParser(p,"1+2") )
+        def test_regexp(self):
 
-print( runParser(digit(),"12") )
+            p = pR("""\s*""")
+            success,s,v = runParser(p,"abcde")
+            self.assertTrue( v.word == "" )
+
+            success,s,v = runParser(p,"  abcde")
+            self.assertTrue( v.word == "  " )
+
+        def test_skip(self):
+
+            p = pR("""\w+""")
+            success,s,v = runParser(p,"abcde")
+            self.assertTrue(v.word == "abcde")
+
+            success,s,*v = runParser(pK(p),"abcde")
+            self.assertTrue(v == [])
+
+        def test_do(self):
+        
+            p = d(word("a"),word("b"),word("c"))
+            success,s,*v = runParser(p,"abcde")
+            self.assertTrue(v == ["a","b","c"])
+
+        def test_cl(self):
+            
+            p = c(digit(),
+                  a(word("+"), lambda _: (lambda n,m: n+m)))
+            success,s,v = runParser(p,"1 + 2")
+            self.assertTrue(v == 3)
+
+    unittest.main()
+    
