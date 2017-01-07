@@ -17,6 +17,8 @@ xxxxxxx abcdef= 100
 >>> a = A("John Lennon")
 >>> str(a)
 <<class A: John Lennon>>
+>>> print("number = %d, %s" % (1,"abcd"))
+number = 1, abcd
 
 """
 
