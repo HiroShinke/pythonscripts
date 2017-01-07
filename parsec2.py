@@ -5,87 +5,179 @@ import re
 SUCCESS = True
 FAILED  = False
 
-def pChar(c):
-    def parse(s,i):
-        if i < len(s) and s[i] == c:
-            return (SUCCESS,i+1,s[i])
-        else:
-            return (FAILED,i)
+class ParserState:
+
+    def __init__(self,str,pos=0,lineno=0,column=0):
+        self.str = str
+        self.pos = pos
+        self.lineno = lineno
+        self.column = column
+
+    def __eq__(self,o):
+        return self.pos == o.pos
+
+    def __getitem__(self,key):
+        return self.str[key]
+
+    def curstr(self):
+        return self[self.pos:]
+
+    def forwardPos(self,p):
+        str = self.curstr()[0:p]
+        nc  = str.count("\n")
+        ln  = str.split("\n",-1)
+        return ParserState(self.str,
+                           self.pos + p,
+                           self.lineno + nc,
+                           self.column + p if nc == 0 else len(ln[-1]))
+    def isEos(self):
+        return not (self.pos < len(self.str) )
+
+class Token:
+
+    def __init__(self,word,pos,lineno,column):
+        self.word = word
+        self.pos = pos
+        self.lineno = lineno
+        self.column = column
+
+
+def runParser(p,str):
+    return p(ParserState(str))
+
+        
+def pChar(pred):
+    def parse(s):
+        if s.isEos:
+            w = pred(s)
+            if w:
+                return (SUCCESS,
+                        s.forwardPos(len(w)),
+                        Token(w,
+                              s.pos,
+                              s.lineno,
+                              s.column))
+            else:
+                return (FAILED,s)
     return parse
-    
-def regexpP(pat):
+
+def pNotChar(pred):
+    def parse(s):
+        if s.isEos:
+            w = pred(s)
+            if w == None:
+                return (SUCCESS,
+                        s.forwardPos(1),
+                        Token(s.curstr()[0],
+                              s.pos,
+                              s.lineno,
+                              s.column))
+            else:
+                return (FAILED,s)
+    return parse
+
+def predString(str):
+    def pred(s):
+        cur = s.curstr()
+        if cur[0:len(str)] == str:
+            return str
+        else:
+            return None
+    return pred
+
+def predRegexp(pat):
     prog = re.compile("^" + pat)
-    def parse(s,i):
-        if i < len(s):
-            pass
-        else:
-            return (FAILED,i)
-        m = prog.match(s[i:])
+    def pred(s):
+        m = prog.match(s.curstr())
         if m:
-            s = m.group(0)
-            return (SUCCESS,i + len(s),s)
+            str = m.group(0)
+            return str
         else:
-            return (FAILED,i)
-    return parse
+            return None
+    return pred
+
+def pS(str):
+    return pChar( predString(str) )
+
+def pR(str):
+    return pChar( predRegexp(str) )
+
+def pNS(str):
+    return pNotChar( predString(str) )
+  
+def pNR(regexp):
+    return pNotChar( predRegexp(regexp) )
+  
+def pAny():
+    return pChar( lambda s: s.curstr[0] )
+
+def pEof():
+    return pNotFollowdBy(pAny)
+
+def token(p):
+    return pU( pDo( pK( pR("\s*") ), p ))
 
 def pDo(*ps):
-
-    def parse(s,i):
+    def parse(s):
         ret = []
         for p in ps:
-            success,i,*w = p(s,i)
+            print(s.curstr())
+            success,s,*w = p(s)
+            print(*w)
             if success:
                 ret.append(*w)
             else:
-                pass
-        return (SUCCESS,i,ret)
-    return parse
-            
-def pOr(*ps):
-
-    def parse(s,i):
-        ret = []
-        for p in ps:
-            success,i0,*w = p(s,i)
-            if success:
-                return (SUCCESS,i0,*w)
-        return (FAILED,i)
+                return (FAILED,s)
+        return (SUCCESS,s,*ret)
     return parse
 
 def pChain(p,op,evalFunc):
 
-    def parse(s,i):
+    def parse(s):
         values = []
         ops    = []
-        success,i,*w = p(s,i)
+        success,s,*w = p(s)
         if success:
             values.append(*w)
             while True:
-                success,i,*w = op(s,i)
+                success,s,*w = op(s)
                 if success:
-                    success,i,*w1 = p(s,i)
+                    success,s,*w1 = p(s)
                     if success:
                         ops.append(w[0])
                         values.append(*w1)
                     else:
-                        return [FAILED,i]
+                        return (FAILED,s)
                 else:
                     break
-            return [SUCCESS,i,evalFunc(values,ops)]
+            return (SUCCESS,
+                    s,
+                    evalFunc(values,ops))
         else:
-            return [FAILED,i]
+            return (FAILED,s)
     return parse
 
-def actionP(p,func):
+def pAction(p,func):
 
-    def parse(s,i):
-        success,i,*w = p(s,i)
+    def parse(s):
+        success,s,*w = p(s)
         if success:
-            return [SUCCESS,i,func(*w)]
+            return (SUCCESS,s,func(*w))
         else:
-            return [FAILED,i]
+            return (FAILED,s)
     return parse
 
+
+def pDebug(label,p):
+    def parse(s):
+      success,s0,*w = p(s)
+      if success:
+        print("label=" + label + " SUCCESS")
+        return (SUCCESS,s0,*w)
+      else:
+        print("label=" + label + " FAILED")
+        return (FAILED,s0)
+    return parse
     
 def pCr1(p,op):
 
@@ -119,16 +211,86 @@ def pCl1(p,op):
 
     return pChain(p,op,evalStack)
 
-# def token(p):
+# P is for paren
+def pP(po,p,pc):
+    return pD( pK(po), p, pK(pc) )
+
+# pOpt
+def pOpt(p):
+    def parse(s):
+      success,s0,*w = p(s)
+      if success:
+          return (SUCCESS,s0,*w)
+      else:
+          if s0 == s:
+              return (SUCCESS,s)
+          else:
+              # print "failed at #{s0}"
+              return (FAILED,s0)
+    return parse
+
+# notFollowedBy
+def pNotFolloedBy(p):
+    def parse(s):
+        success,_ = p(s)
+        if not success:
+            return (SUCCESS,s)
+        else:
+            return (FAILED,s)
+            
+# lookAhead
+def pLookAhead(p):
+    def parse(s):
+        success,s0,_ = p(s)
+        if success:
+            return (SUCCESS,s)
+        else:
+            if s0 != s:
+                # print "failed at #{s0}"
+                return (FAILED,s0)
+            else:
+                return (FAILED,s)
+    return parse
+
+# O is for Or
+# the choice combinator
+def pO(*ps):
+    def parse(s):
+        ret = []
+        for p in ps:
+            success,s0,*w = p(s)
+            if success:
+                return (SUCCESS,s0,*w)
+            elif s0 != s:
+                return (FAILED,s0)
+        return (FAILED,s)
+    return parse
+
+
+# U is for Undo
+# the try combinator
+def pU(p):
+    def parse(s):
+        success,s0,*w = p(s)
+        if success:
+            return (SUCCESS,s0,*w)
+        else:
+            return (FAILED,s)
+    return parse
+
+
+def word(str):
+    return pDebug(str,pAction(pS(str), lambda s: s.word))
 
 def digit():
-    return actionP(regexpP("\d+"), lambda s: int(s))
+    return pAction(pR("\d+"), lambda s: int(s.word))
 
-
-p = pDo(pChar("a"),pChar("b"),pChar("c"))
-print( p("abcde",0) )
+p = pDo(word("a"),word("b"),word("c"))
+print( runParser(p,"abcde") )
 
 p = pCl1(digit(),
-         actionP(pChar("+"), lambda _: (lambda n,m: n+m)))
+         pAction(pS("+"), lambda _: (lambda n,m: n+m)))
 
-print( p("1+2",0) )
+print( runParser(p,"1+2") )
+
+print( runParser(digit(),"12") )
