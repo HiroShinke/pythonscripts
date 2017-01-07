@@ -38,7 +38,7 @@ import unittest
 class TestClassDefinition(unittest.TestCase):
 
     def setUp(self):
-        pass
+        A.AAA = "dddd"
     
     def test_constructor_chain(self):
 
@@ -72,11 +72,12 @@ class TestClassDefinition(unittest.TestCase):
     def test_dynamic_method_creation(self):
         a = A(10,20)
         def func(self):
-            return "zzzz"
+            return self.AAA
         setattr(A, "hoo", func)
         A.joo = func
-        self.assertTrue( a.hoo() == "zzzz" )
-        self.assertTrue( a.joo() == "zzzz" )
+        self.assertTrue( a.hoo() == "dddd" )
+        self.assertTrue( a.joo() == "dddd" )
+
         
 if __name__ == '__main__':
     unittest.main()        
