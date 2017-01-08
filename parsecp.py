@@ -63,6 +63,8 @@ def pChar(pred):
                               s.column))
             else:
                 return (FAILED,s)
+        else:
+            return (FAILED,s)
     return parse
 
 def pNotChar(pred):
@@ -78,6 +80,8 @@ def pNotChar(pred):
                               s.column))
             else:
                 return (FAILED,s)
+        else:
+            return (FAILED,s)
     return parse
 
 def predString(str):
@@ -124,9 +128,9 @@ def token(p):
 def pRef(lazy):
     p = None
     def parse(s):
-        if p == None:
-            p = lazy.call()
-        p(s)
+#        if p == None:
+        p = lazy()
+        return p(s)
     return parse
   
 def pOk(v):
@@ -449,16 +453,15 @@ sb1  = pSepBy1
 ws   = pWithSep
 ws1  = pWithSep1
 
+def word(str):
+    return a(token(pS(str)), lambda s: s.word)
+    
+def digit():
+    return a(token(pR("""\d+""")), lambda s: int(s.word))
 
 if __name__ == "__main__":
     
     import unittest
-
-    def word(str):
-        return a(token(pS(str)), lambda s: s.word)
-    
-    def digit():
-        return a(token(pR("""\d+""")), lambda s: int(s.word))
 
     class XXXX(unittest.TestCase):
 
