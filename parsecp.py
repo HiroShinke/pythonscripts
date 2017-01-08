@@ -469,7 +469,7 @@ if __name__ == "__main__":
 
         def test_regexp(self):
 
-            p = pR("""\s*""")
+            p = pR(r"\s*")
             success,s,v = runParser(p,"abcde")
             self.assertTrue( v.word == "" )
 
@@ -478,7 +478,7 @@ if __name__ == "__main__":
 
         def test_skip(self):
 
-            p = pR("""\w+""")
+            p = pR(r"\w+")
             success,s,v = runParser(p,"abcde")
             self.assertTrue(v.word == "abcde")
 
@@ -500,11 +500,11 @@ if __name__ == "__main__":
 
         def test_ws(self):
 
-            p = pR("""\s*""")
+            p = pR(r"\s*")
             success,s,v = runParser(p,"")
             self.assertTrue( v.word == "" )
 
-            p = pR("""\s+""")
+            p = pR(r"\s+")
             success,s,*v = runParser(p,"")
             self.assertTrue( v == [] )
             
