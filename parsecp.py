@@ -459,7 +459,7 @@ def word(str):
     return a(token(pS(str)), lambda s: s.word)
     
 def digit():
-    return a(token(pR("""\d+""")), lambda s: int(s.word))
+    return a(token(pR(r"\d+")), lambda s: int(s.word))
 
 if __name__ == "__main__":
     
