@@ -378,7 +378,7 @@ def pOpt(p):
           if s0 == s:
               return (SUCCESS,s)
           else:
-              # print "failed at #{s0}"
+              print("failed at {0}".format(s0))
               return (FAILED,s0)
     return parse
 
@@ -400,7 +400,7 @@ def pLookAhead(p):
             return (SUCCESS,s)
         else:
             if s0 != s:
-                # print "failed at #{s0}"
+                print("failed at {0}".format(s0))
                 return (FAILED,s0)
             else:
                 return (FAILED,s)
@@ -492,6 +492,21 @@ if __name__ == "__main__":
                   a(word("+"), lambda _: (lambda n,m: n+m)))
             success,s,v = runParser(p,"1 + 2")
             self.assertTrue(v == 3)
+
+        def test_ws(self):
+
+            p = pR("""\s*""")
+            success,s,v = runParser(p,"")
+            self.assertTrue( v.word == "" )
+
+            p = pR("""\s+""")
+            success,s,*v = runParser(p,"")
+            self.assertTrue( v == [] )
+            
+            p = pS("")
+            success,s,v = runParser(p,"")
+            self.assertTrue( v.word == "" )
+            
 
     unittest.main()
     
