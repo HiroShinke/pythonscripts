@@ -1,4 +1,8 @@
 
+"""
+     yet another Parsec like parser combinator library for Python
+     a pure functional implementation
+"""
 
 import re
 
@@ -386,6 +390,7 @@ def pNotFolloedBy(p):
             return (SUCCESS,s)
         else:
             return (FAILED,s)
+    return parse
             
 # lookAhead
 def pLookAhead(p):
