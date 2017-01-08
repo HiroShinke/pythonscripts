@@ -3,6 +3,8 @@
      yet another Parsec like parser combinator library for Python
      a pure functional implementation
 """
+__all__ = [ "a","r","para","f","k","l","m","u","o","d","c","opt","sb","sb1",
+            "ws","ws1","pS","pR","token","pRef","runParser" ]
 
 import re
 
