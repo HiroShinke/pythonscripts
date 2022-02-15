@@ -72,9 +72,10 @@ def do_diffdir(f,t):
                 print(f'{t0} only in {t0.o.parent}')
         elif tag == "replace":
             for f0 in seq1[i1:i2]:
-                print(f'- {f0.o}')
+                print(f'{f0.o} only in {f0.o.parent}')
             for t0 in seq2[j1:j2]:
-                print(f'+ {t0.o}')
+                print(f'{t0} only in {t0.o.parent}')
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f"    ,type=str,  action='store')
