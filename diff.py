@@ -19,19 +19,6 @@ class DifferPair:
             self.k == other.k
             )
 
-def do_path(path,proc,*args):
-    if path.is_dir():
-        do_dir(path,proc,*args)
-    else:
-        do_file(path,proc,*args)
-
-def do_file(path,proc,*args):
-    proc(path,*args)
-
-def do_dir(path,proc,*args):
-    for x in path.iterdir():
-        do_path(x,proc,*args)
-
 def do_diff(f,t):
     fp = Path(f)
     tp = Path(t)
