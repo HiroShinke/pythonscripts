@@ -19,13 +19,11 @@ class DifferPair:
             self.k == other.k
             )
 
-def do_diff(f,t):
-    fp = Path(f)
-    tp = Path(t)
+def do_diff(fp,tp):
     if fp.is_file() and tp.is_file():
-        do_difffile(f,t)
+        do_difffile(fp,tp)
     elif fp.is_dir() and tp.is_dir():
-        do_diffdir(f,t)
+        do_diffdir(fp,tp)
     else:
         print(f"uncomparable {f} and {t}")
     
@@ -33,15 +31,15 @@ def do_diff(f,t):
 def do_difffile(f,t):
     print(f"---{f}")
     print(f"+++{t}")
-    ret = difflib.ndiff(list(Path(f).open(mode='r')),
-                        list(Path(t).open(mode='r')),
+    ret = difflib.ndiff(list(f.open(mode='r')),
+                        list(t.open(mode='r')),
                         charjunk=None)
     ret = [ l for l in ret if l[0] != '?']
     print(''.join(ret),end='')
 
 def do_diffdir(f,t):
-    seq1 = list( [ DifferPair(n1.name,n1) for n1 in Path(f).iterdir() ])
-    seq2 = list( [ DifferPair(n2.name,n2) for n2 in Path(t).iterdir() ])
+    seq1 = list( [ DifferPair(n1.name,n1) for n1 in f.iterdir() ])
+    seq2 = list( [ DifferPair(n2.name,n2) for n2 in t.iterdir() ])
 
     matcher = difflib.SequenceMatcher(a = seq1,b = seq2)
     # print(seq1)
@@ -62,7 +60,7 @@ def main():
     parser.add_argument("-f"    ,type=str,  action='store')
     parser.add_argument("-t"    ,type=str,  action='store')    
     args = parser.parse_args()
-    do_diff(args.f, args.t)
+    do_diff(Path(args.f), Path(args.t))
 
 if __name__ == "__main__":
     main()
