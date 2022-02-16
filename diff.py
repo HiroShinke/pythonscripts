@@ -51,13 +51,7 @@ def do_diffdir(f,t):
         if tag == "equal":
             for f0,t0 in zip(seq1[i1:i2],seq2[j1:j2]):
                 do_diff(f0.o,t0.o)
-        elif tag == "delete":
-            for f0 in seq1[i1:i2]:
-                print(f'{f0.o} only in {f0.o.parent}')
-        elif tag == "insert":
-            for t0 in seq2[j1:j2]:
-                print(f'{t0} only in {t0.o.parent}')
-        elif tag == "replace":
+        else:
             for f0 in seq1[i1:i2]:
                 print(f'{f0.o} only in {f0.o.parent}')
             for t0 in seq2[j1:j2]:
