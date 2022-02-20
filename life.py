@@ -20,7 +20,28 @@ class Grid:
 
     def __str__(self):
         str_row = [ "".join(r) for r in self.rows ]
-        return "\n".join(str_row) + "\n"
+        return "\n".join(str_row)
+
+class ColumnPrinter:
+
+    def __init__(self):
+        self.rows = [];
+
+    def __str__(self):
+        head0 = [ f"{i}".center(len(v))
+                  for (i,v) in enumerate(self.rows[0]) ]
+        rows1 = [ head0 ]
+        rows1.extend(self.rows)
+        rows2 = [ "|".join(r) for r in rows1 ]
+        return "\n".join(rows2)
+
+    def append(self,text):
+        rows0 = text.split("\n");
+        if len(self.rows) < len(rows0):
+            for _ in range(len(rows0)-len(self.rows)):
+                self.rows.append([])
+        for i,r in enumerate(rows0):
+            self.rows[i].append(r)
         
 def count_neighbors(y, x, get):
     n_ = get(y - 1, x + 0)
@@ -69,11 +90,14 @@ def test():
     print(grid)
     print(f"count={count_neighbors(1,4,grid.get)}")
 
-    for i in range(10):
+    columns = ColumnPrinter()
+    for i in range(5):
         print(f"step={i}")
-        print(grid)
+        columns.append(str(grid))
         grid = simulate(grid)
-    
+
+    print(columns)
+        
 
 if __name__ == "__main__":
     test()
