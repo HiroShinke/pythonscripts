@@ -1,15 +1,15 @@
 
 from threading import Lock, Thread
-import threading
 import tempfile
 import time
 import argparse
 import tracemalloc
 from queue import Queue
+from concurrent.futures import ThreadPoolExecutor
 
 ALIVE = '*'
 EMPTY = '-'
-FILEWORK = 10000000
+FILEWORK = 10000
 COUNT_NEIGHBOR_WORK = False
 
 
@@ -119,7 +119,8 @@ class ColumnPrinter:
 
 def filework():
     f = tempfile.TemporaryFile()
-    f.write(b'x' * FILEWORK)
+    for i in range(FILEWORK):
+        f.write(b'x')
     f.close()
 
 def count_neighbors(y, x, get):
@@ -196,6 +197,22 @@ def simulate_threaded(grid):
             threads.append(thread)
     for t in threads:
         t.join()
+    return next_grid
+
+def simulate_pool(pool, grid):
+
+    next_grid = LockingGrid(grid.height, grid.width)
+
+    futures = []
+    for y in range(grid.height):
+        for x in range(grid.width):
+            args = (y, x, grid.get, next_grid.set)
+            future = pool.submit(step_cell, *args)
+            futures.append(future)
+
+    for f in futures:
+        f.result()
+
     return next_grid
 
 def simulate_pipeline(grid, in_queue, out_queue):
@@ -354,6 +371,24 @@ def testGrid3():
 
     for t in threads:
         t.join()
+
+def testGrid4():
+
+    grid = LockingGrid(5,9)
+    grid.set(0, 3, ALIVE)
+    grid.set(1, 4, ALIVE)
+    grid.set(2, 2, ALIVE)
+    grid.set(2, 3, ALIVE)
+    grid.set(2, 4, ALIVE)
+
+    columns = ColumnPrinter()
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        for i in range(15):
+            columns.append(str(grid))
+            grid = simulate_pool(pool, grid)
+
+    columns.append(str(grid))
+    print(columns)
     
 def main():
 
@@ -381,6 +416,8 @@ def main():
             testGrid2()
         case "3":
             testGrid3()
+        case "4":
+            testGrid4()
         case _:
             parser.print_help()
 
