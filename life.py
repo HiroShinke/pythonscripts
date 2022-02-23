@@ -298,8 +298,8 @@ def main():
 
     size, peak = tracemalloc.get_traced_memory()
     end = time.time()            
-    print(f"time diff={end - start}")
-    print(f"memory current,peek={size},{peak}")
+    print(f"time diff={end - start:,}")
+    print(f"memory current,peek={size:,}, {peak:,}")
     
 if __name__ == "__main__":
     main()
