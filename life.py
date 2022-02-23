@@ -8,6 +8,7 @@ from queue import Queue
 
 ALIVE = '*'
 EMPTY = '-'
+FILEWORK = 10000000
 
 
 class Grid:
@@ -129,7 +130,7 @@ def count_neighbors(y, x, get):
 
 def filework():
     f = tempfile.TemporaryFile()
-    f.write(b'x' * 10000000)
+    f.write(b'x' * FILEWORK)
     f.close()
 
 def game_logic(state,neighbors):
@@ -270,10 +271,17 @@ def testGrid2():
 
     
 def main():
+
+    global FILEWORK
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--type", action="store", default="0")
+    parser.add_argument("--filework", type=int, action="store")
     args = parser.parse_args()
 
+    if args.filework:
+        FILEWORK = args.filework
+        
     tracemalloc.start()
     start = time.time()
     
@@ -285,11 +293,13 @@ def main():
         case "2":
             testGrid2()
         case _:
-            parser.help()
+            parser.print_help()
 
     size, peak = tracemalloc.get_traced_memory()
-    end = time.time()            
+    end = time.time()
+    print("")
     print(f"time diff={end - start:,}")
+    print(f"filework = {FILEWORK:,}")
     print(f"memory current,peek={size:,}, {peak:,}")
     
 if __name__ == "__main__":
