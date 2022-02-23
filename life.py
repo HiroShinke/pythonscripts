@@ -1,5 +1,5 @@
 
-from threading import Lock,Thread
+from threading import Lock, Thread
 import tempfile
 import time
 import argparse
@@ -9,10 +9,11 @@ from queue import Queue
 ALIVE = '*'
 EMPTY = '-'
 
+
 class Grid:
     def __init__(self, height, width):
         self.height = height
-        self.width  = width
+        self.width = width
         self.rows = []
         for _ in range(self.height):
             self.rows.append([EMPTY]*self.width)
@@ -44,12 +45,12 @@ class LockingGrid(Grid):
     def set(self, x, y, v):
         with self.lock:
             return super().set(x, y, v)
-        
+
 
 class ClosableQueue(Queue):
 
     SENTINEL = object()
-    
+
     def __init__(self):
         super().__init__()
 
@@ -95,7 +96,7 @@ class SimulationError(Exception):
 class ColumnPrinter:
 
     def __init__(self):
-        self.rows = [];
+        self.rows = []
 
     def __str__(self):
         head0 = [ f"{i}".center(len(v))
@@ -106,7 +107,7 @@ class ColumnPrinter:
         return "\n".join(rows2)
 
     def append(self,text):
-        rows0 = text.split("\n");
+        rows0 = text.split("\n")
         if len(self.rows) < len(rows0):
             for _ in range(len(rows0)-len(self.rows)):
                 self.rows.append([])
@@ -114,7 +115,6 @@ class ColumnPrinter:
             self.rows[i].append(r)
         
 def count_neighbors(y, x, get):
-    
     n_ = get(y - 1, x + 0)
     ne = get(y - 1, x + 1)
     e_ = get(y + 0, x + 1)
@@ -128,13 +128,11 @@ def count_neighbors(y, x, get):
     return len(alives)
 
 def filework():
-
     f = tempfile.TemporaryFile()
     f.write(b'x' * 10000000)
     f.close()
 
 def game_logic(state,neighbors):
-
     filework()
     if state == ALIVE:
         if neighbors < 2:
@@ -147,7 +145,6 @@ def game_logic(state,neighbors):
     return state
 
 def game_logic_thread(item):
-    
     y, x, state, neighbors = item
     try:
         # print(f"@game_logic_thread x,y = ({x},{y})")
@@ -158,7 +155,6 @@ def game_logic_thread(item):
 
 
 def step_cell(y, x, get, set):
-    
     state = get(y, x)
     neighbors = count_neighbors(y, x, get)
     next_state = game_logic(state, neighbors)
@@ -172,7 +168,6 @@ def simulate(grid):
     return next_grid
 
 def simulate_threaded(grid):
-    
     next_grid = LockingGrid(grid.height, grid.width)
     threads = []
     for y in range(grid.height):
@@ -187,7 +182,6 @@ def simulate_threaded(grid):
     return next_grid
 
 def simulate_pipeline(grid, in_queue, out_queue):
-
     for y in range(grid.height):
         for x in range(grid.width):
             state = grid.get(y, x)
@@ -213,7 +207,6 @@ def simulate_pipeline(grid, in_queue, out_queue):
     return next_grid
 
 def testGrid0():
-
     grid = Grid(5,9)
     grid.set(0, 3, ALIVE)
     grid.set(1, 4, ALIVE)
@@ -230,7 +223,6 @@ def testGrid0():
 
 
 def testGrid1():
-
     grid = LockingGrid(5,9)
     grid.set(0, 3, ALIVE)
     grid.set(1, 4, ALIVE)
@@ -246,7 +238,6 @@ def testGrid1():
     print(columns)
 
 def testGrid2():
-
     in_queue = ClosableQueue()
     out_queue = ClosableQueue()
     
