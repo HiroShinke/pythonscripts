@@ -1,5 +1,6 @@
 
 from threading import Lock, Thread
+import threading
 import tempfile
 import time
 import argparse
@@ -9,6 +10,7 @@ from queue import Queue
 ALIVE = '*'
 EMPTY = '-'
 FILEWORK = 10000000
+COUNT_NEIGHBOR_WORK = False
 
 
 class Grid:
@@ -114,8 +116,14 @@ class ColumnPrinter:
                 self.rows.append([])
         for i,r in enumerate(rows0):
             self.rows[i].append(r)
-        
+
+def filework():
+    f = tempfile.TemporaryFile()
+    f.write(b'x' * FILEWORK)
+    f.close()
+
 def count_neighbors(y, x, get):
+    if COUNT_NEIGHBOR_WORK : filework()
     n_ = get(y - 1, x + 0)
     ne = get(y - 1, x + 1)
     e_ = get(y + 0, x + 1)
@@ -128,10 +136,14 @@ def count_neighbors(y, x, get):
     alives = [ s for s in neighbor_states if s == ALIVE ]
     return len(alives)
 
-def filework():
-    f = tempfile.TemporaryFile()
-    f.write(b'x' * FILEWORK)
-    f.close()
+def count_neighbors_thread(item):
+    y, x, state, get = item
+    try:
+        neighbors = count_neighbors(y, x, get)
+    except Exception as e:
+        neighbors = e
+    return (y, x, state, neighbors)
+
 
 def game_logic(state,neighbors):
     filework()
@@ -147,6 +159,10 @@ def game_logic(state,neighbors):
 
 def game_logic_thread(item):
     y, x, state, neighbors = item
+    if isinstance(neighbors, Exception):
+        return (y, x, neighbors)
+    else:
+        pass
     try:
         # print(f"@game_logic_thread x,y = ({x},{y})")
         next_state = game_logic(state, neighbors)
@@ -207,6 +223,30 @@ def simulate_pipeline(grid, in_queue, out_queue):
 
     return next_grid
 
+def simulate_phased_pipeline(grid, in_queue, middle_queue, out_queue):
+    for y in range(grid.height):
+        for x in range(grid.width):
+            state = grid.get(y, x)
+            in_queue.put((y, x, state, grid.get))
+
+    in_queue.join()
+    middle_queue.join()
+    out_queue.close()
+
+    next_grid = LockingGrid(grid.height, grid.width)
+
+    while (item := out_queue.get()):
+        match item:
+            case (y, x, next_state):
+                next_grid.set(y, x, next_state)
+            case ClosableQueue.SENTINEL:
+                break
+            case _:
+                print(f"item = {item}")
+                raise SimulationError(y, x) from next_state
+
+    return next_grid
+
 def testGrid0():
     grid = Grid(5,9)
     grid.set(0, 3, ALIVE)
@@ -220,6 +260,7 @@ def testGrid0():
         columns.append(str(grid))
         grid = simulate(grid)
 
+    columns.append(str(grid))        
     print(columns)
 
 
@@ -236,6 +277,7 @@ def testGrid1():
         columns.append(str(grid))
         grid = simulate_threaded(grid)
 
+    columns.append(str(grid))
     print(columns)
 
 def testGrid2():
@@ -261,6 +303,7 @@ def testGrid2():
         columns.append(str(grid))
         grid = simulate_pipeline(grid,in_queue,out_queue)
 
+    columns.append(str(grid))
     print(columns)
 
     for t in threads:
@@ -269,18 +312,62 @@ def testGrid2():
     for t in threads:
         t.join()
 
+
+def testGrid3():
+
+    in_queue = ClosableQueue()
+    middle_queue = ClosableQueue()
+    out_queue = ClosableQueue()
+
+    threads = []
+    for _ in range(5):
+        thread = QueueWorker(
+            count_neighbors_thread, in_queue, middle_queue)
+        thread.start()
+        threads.append(thread)
+
+    for _ in range(5):
+        thread = QueueWorker(
+            game_logic_thread, middle_queue, out_queue)
+        thread.start()
+        threads.append(thread)
+        
+    grid = LockingGrid(5,9)
+    grid.set(0, 3, ALIVE)
+    grid.set(1, 4, ALIVE)
+    grid.set(2, 2, ALIVE)
+    grid.set(2, 3, ALIVE)
+    grid.set(2, 4, ALIVE)
+
+    columns = ColumnPrinter()
+    for i in range(15):
+        columns.append(str(grid))
+        grid = simulate_phased_pipeline(grid,in_queue,
+                                        middle_queue,
+                                        out_queue)
+
+    columns.append(str(grid))
+    print(columns)
+
+    for t in threads:
+        t.stop()
+
+    for t in threads:
+        t.join()
     
 def main():
 
     global FILEWORK
+    global COUNT_NEIGHBOR_WORK
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--type", action="store", default="0")
     parser.add_argument("--filework", type=int, action="store")
+    parser.add_argument("--cnwork", action="store_const", const=True)
     args = parser.parse_args()
 
-    if args.filework:
-        FILEWORK = args.filework
+    if args.filework: FILEWORK = args.filework
+    if args.cnwork: COUNT_NEIGHBOR_WORK = True
         
     tracemalloc.start()
     start = time.time()
@@ -292,6 +379,8 @@ def main():
             testGrid1()
         case "2":
             testGrid2()
+        case "3":
+            testGrid3()
         case _:
             parser.print_help()
 
@@ -300,6 +389,7 @@ def main():
     print("")
     print(f"time diff={end - start:,}")
     print(f"filework = {FILEWORK:,}")
+    print(f"count_neighbor work = {COUNT_NEIGHBOR_WORK}")
     print(f"memory current,peek={size:,}, {peak:,}")
     
 if __name__ == "__main__":
