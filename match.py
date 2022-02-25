@@ -41,8 +41,6 @@ def check_mapping(n):
             print(f"match y={y}")
         case { "a": 1 } as x :
             print(f"match x={x}")
-
-
         case _:
             print(f"n is not found[ {n}")
 
