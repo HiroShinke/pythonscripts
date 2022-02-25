@@ -6,6 +6,7 @@ import argparse
 import tracemalloc
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor
+import asyncio
 
 ALIVE = '*'
 EMPTY = '-'
@@ -123,6 +124,13 @@ def filework():
         f.write(b'x')
     f.close()
 
+async def co_filework():
+    f = tempfile.TemporaryFile()
+    for i in range(FILEWORK):
+        f.write(b'x')
+    f.close()
+
+    
 def count_neighbors(y, x, get):
     if COUNT_NEIGHBOR_WORK : filework()
     n_ = get(y - 1, x + 0)
@@ -158,6 +166,20 @@ def game_logic(state,neighbors):
             return ALIVE
     return state
 
+
+async def co_game_logic(state,neighbors):
+    await co_filework()
+    if state == ALIVE:
+        if neighbors < 2:
+            return EMPTY
+        elif neighbors > 3:
+            return EMPTY
+    else:
+        if neighbors == 3:
+            return ALIVE
+    return state
+
+
 def game_logic_thread(item):
     y, x, state, neighbors = item
     if isinstance(neighbors, Exception):
@@ -171,19 +193,40 @@ def game_logic_thread(item):
         next_state = e
     return (y, x, next_state)
 
-
 def step_cell(y, x, get, set):
     state = get(y, x)
     neighbors = count_neighbors(y, x, get)
     next_state = game_logic(state, neighbors)
     set(y, x, next_state)
 
+
+async def co_step_cell(y, x, get, set):
+    state = get(y, x)
+    neighbors = count_neighbors(y, x, get)
+    next_state = await co_game_logic(state, neighbors)
+    set(y, x, next_state)
+
+    
 def simulate(grid):
     next_grid = Grid(grid.height, grid.width)
     for y in range(grid.height):
         for x in range(grid.width):
             step_cell(y, x, grid.get, next_grid.set)
     return next_grid
+
+async def co_simulate(grid):
+    next_grid = Grid(grid.height, grid.width)
+
+    tasks = []
+    for y in range(grid.height):
+        for x in range(grid.width):
+            task = co_step_cell(y, x, grid.get, next_grid.set)
+            tasks.append(task)
+
+    await asyncio.gather(*tasks)
+            
+    return next_grid
+
 
 def simulate_threaded(grid):
     next_grid = LockingGrid(grid.height, grid.width)
@@ -389,6 +432,24 @@ def testGrid4():
 
     columns.append(str(grid))
     print(columns)
+
+def testGrid5():
+
+    grid = LockingGrid(5,9)
+    grid.set(0, 3, ALIVE)
+    grid.set(1, 4, ALIVE)
+    grid.set(2, 2, ALIVE)
+    grid.set(2, 3, ALIVE)
+    grid.set(2, 4, ALIVE)
+
+    columns = ColumnPrinter()
+
+    for i in range(15):
+        columns.append(str(grid))
+        grid = asyncio.run(co_simulate(grid))
+        
+    columns.append(str(grid))
+    print(columns)
     
 def main():
 
@@ -397,7 +458,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--type", action="store", default="0")
-    parser.add_argument("--filework", type=int, action="store")
+    parser.add_argument("--filework", type=int, action="store",default=FILEWORK)
     parser.add_argument("--cnwork", action="store_const", const=True)
     args = parser.parse_args()
 
@@ -418,6 +479,8 @@ def main():
             testGrid3()
         case "4":
             testGrid4()
+        case "5":
+            testGrid5()
         case _:
             parser.print_help()
 
