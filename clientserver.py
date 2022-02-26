@@ -53,7 +53,6 @@ class Session(ConnectionBase):
         self.guesses = []
 
     def loop(self):
-        print(f"Start loop: self = {self}")
         while command := self.receive():
             parts = command.split(' ')
             match parts:
@@ -130,15 +129,15 @@ class Client(ConnectionBase):
     def report_outcome(self, number):
         new_distance = math.fabs(number - self.secret)
         decision = UNSURE
-
+                 
         if new_distance == 0:
             decision = CORRECT
         elif self.last_distance is None:
             pass
         elif new_distance < self.last_distance:
-            dicision = WARMER
+            decision = WARMER
         elif new_distance > self.last_distance:
-            dicision = COLDER
+            decision = COLDER
             
         self.last_distance = new_distance
 
@@ -192,7 +191,7 @@ def main():
         target = run_server, args = (address,), daemon=True)
     server_thread.start()
 
-    time.sleep(1)
+    # time.sleep(1)
 
     results = run_client(address)
     for number, outcome in results:
