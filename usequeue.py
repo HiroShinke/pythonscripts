@@ -30,7 +30,7 @@ class QueueWorker(Thread):
                 break
         print(f"Stop Worker: {self.name}")
 
-    def filework():
+    def filework(self):
         f = Path(self.name).open("w")
         f.write("xxxxxx")
         f.close()
