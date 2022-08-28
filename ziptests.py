@@ -94,14 +94,12 @@ abcdef
         if path.is_dir():
             if m := re.search(r"^_(.+\.zip)$",relpath.name,re.IGNORECASE):
                 zipname = m.group(1)
-                fh = tempfile.NamedTemporaryFile("w",delete=False)
-                fh.close()
-                print(f"name = {fh.name}")
-                with zipfile.ZipFile(fh.name,"w") as zip2:
-                    for c in  path.iterdir():                
-                        do_rec_make_zip(c,zip2,str(path))
-                zip.write(str(fh.name),arcname=relpath)
-                os.unlink(fh.name)
+                with tempfile.NamedTemporaryFile("w+b") as fh:
+                    print(f"name = {fh.name}")
+                    with zipfile.ZipFile(fh,"w") as zip2:
+                        for c in  path.iterdir():                
+                            do_rec_make_zip(c,zip2,str(path))
+                    zip.write(str(fh.name),arcname=relpath)
             else:
                 for c in  path.iterdir():
                     do_rec_make_zip(c,zip,arcRoot)
