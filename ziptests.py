@@ -82,20 +82,14 @@ abcdef
         zip.write(path,arcname=relpath)
 
     def do_rec_make_zip(path,zip,arcRoot):
-
-        print(f"do_rec_make_zio: start: path = {str(path)}")
-
         relpath = Path(path).relative_to(arcRoot)
-        print(f"path = {str(path)}, relpath = {str(relpath)}")        
-
         if path.is_file():
-            zip.write(str(path),arcname=str(relpath))
-
-        if path.is_dir():
+            zip.write(path,arcname=relpath)
+        elif path.is_dir():
             if m := re.search(r"^_(.+\.zip)$",relpath.name,re.IGNORECASE):
                 zipname = m.group(1)
                 with tempfile.NamedTemporaryFile("w+b") as fh:
-                    print(f"name = {fh.name}")
+                    # print(f"name = {fh.name}")
                     with zipfile.ZipFile(fh,"w") as zip2:
                         for c in  path.iterdir():                
                             do_rec_make_zip(c,zip2,str(path))
@@ -103,8 +97,6 @@ abcdef
             else:
                 for c in  path.iterdir():
                     do_rec_make_zip(c,zip,arcRoot)
-
-        print(f"do_rec_make_zio: end  : path = {str(path)}")                    
 
     zip = zipfile.ZipFile("tmp/sample.zip","w")
     do_rec_make_zip(Path("tmp/_sample.zip"),zip,"tmp/_sample.zip")
