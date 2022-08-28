@@ -22,18 +22,6 @@ class DifferPair:
             self.k == other.k
             )
 
-def makeFile(path,contents=None):
-
-    path   = Path(path)
-    parent = path.parent
-    parent.mkdir(parents=True,exist_ok=True)
-
-    if not contents:
-        contents = f"contents of file: {path}\n"
-    
-    with open(path,"w") as fh:
-        fh.write(contents)
-
 def main():
 
     test_make_zipfile()
@@ -57,6 +45,19 @@ def main():
     do_diff(zipfile.Path("tmp/sample.zip"),
             zipfile.Path("tmp/sample4.zip"))
         
+def makeFile(path,contents=None):
+
+    path   = Path(path)
+    parent = path.parent
+    parent.mkdir(parents=True,exist_ok=True)
+
+    if not contents:
+        contents = f"contents of file: {path}\n"
+    
+    with open(path,"w") as fh:
+        fh.write(contents)
+
+
 def test_make_zipfile():
 
     contents = """\
@@ -77,34 +78,13 @@ abcdef
     makeFile("tmp/_sample4.zip/xxx/c.txt")
     makeFile("tmp/_sample4.zip/xxx/yyy/d.txt")
 
-    def zipwrite(zip,path):
-        relpath = Path(path).relative_to("tmp")
-        zip.write(path,arcname=relpath)
-
-    def do_rec_make_zip(path,zip,arcRoot):
-        relpath = Path(path).relative_to(arcRoot)
-        if path.is_file():
-            zip.write(path,arcname=relpath)
-        elif path.is_dir():
-            if m := re.search(r"^(.+\.zip)$",relpath.name,re.IGNORECASE):
-                zipname = m.group(1)
-                with tempfile.NamedTemporaryFile("w+b") as fh:
-                    # print(f"name = {fh.name}")
-                    with zipfile.ZipFile(fh,"w") as zip2:
-                        for c in  path.iterdir():                
-                            do_rec_make_zip(c,zip2,path)
-                    zip.write(fh.name,arcname=relpath)
-            else:
-                for c in  path.iterdir():
-                    do_rec_make_zip(c,zip,arcRoot)
-
     zip = zipfile.ZipFile("tmp/sample.zip","w")
-    do_rec_make_zip(Path("tmp/_sample.zip"),zip,"tmp/_sample.zip")
+    do_rec_make_zip(Path("tmp/_sample.zip"),zip)
 
     zip = zipfile.ZipFile("tmp/sample4.zip","w")
-    do_rec_make_zip(Path("tmp/_sample4.zip"),zip,"tmp/_sample4.zip")
+    do_rec_make_zip(Path("tmp/_sample4.zip"),zip)
 
-        
+
 def test_print_filelist():
     with zipfile.ZipFile("tmp/sample.zip") as zip:
         for n in zip.namelist():
@@ -129,6 +109,29 @@ def test_print_with_path():
                 for l in fh:
                     print(l,end="")
 
+def zipwrite(zip,path):
+    relpath = Path(path).relative_to("tmp")
+    zip.write(path,arcname=relpath)
+
+def do_rec_make_zip(path,zip,arcRoot=None):
+
+    if not arcRoot: arcRoot = path
+
+    relpath = Path(path).relative_to(arcRoot)
+    if path.is_file():
+        zip.write(path,arcname=relpath)
+    elif path.is_dir():
+        if m := re.search(r"^(.+\.zip)$",relpath.name,re.IGNORECASE):
+            zipname = m.group(1)
+            with tempfile.NamedTemporaryFile("w+b") as fh:
+                # print(f"name = {fh.name}")
+                with zipfile.ZipFile(fh,"w") as zip2:
+                    for c in  path.iterdir():                
+                        do_rec_make_zip(c,zip2,path)
+                zip.write(fh.name,arcname=relpath)
+        else:
+            for c in  path.iterdir():
+                do_rec_make_zip(c,zip,arcRoot)
     
 def do_rec_file(path,proc,*args,**kwargs):
     proc(path,*args,**kwargs)
