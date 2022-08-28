@@ -65,15 +65,15 @@ abcdef
 """
     makeFile("tmp/_sample.zip/a.txt")
     makeFile("tmp/_sample.zip/b.txt")
-    makeFile("tmp/_sample.zip/_sample2.zip/e.txt")
-    makeFile("tmp/_sample.zip/_sample2.zip/_sample3.zip/f.txt")
+    makeFile("tmp/_sample.zip/sample2.zip/e.txt")
+    makeFile("tmp/_sample.zip/sample2.zip/sample3.zip/f.txt")
     makeFile("tmp/_sample.zip/xxx/c.txt")
     makeFile("tmp/_sample.zip/xxx/yyy/d.txt")
 
     makeFile("tmp/_sample4.zip/a.txt")
     makeFile("tmp/_sample4.zip/b.txt")
-    makeFile("tmp/_sample4.zip/_sample2.zip/e.txt")
-    makeFile("tmp/_sample4.zip/_sample2.zip/_sample3.zip/f.txt",contents)
+    makeFile("tmp/_sample4.zip/sample2.zip/e.txt")
+    makeFile("tmp/_sample4.zip/sample2.zip/sample3.zip/f.txt",contents)
     makeFile("tmp/_sample4.zip/xxx/c.txt")
     makeFile("tmp/_sample4.zip/xxx/yyy/d.txt")
 
@@ -86,14 +86,14 @@ abcdef
         if path.is_file():
             zip.write(path,arcname=relpath)
         elif path.is_dir():
-            if m := re.search(r"^_(.+\.zip)$",relpath.name,re.IGNORECASE):
+            if m := re.search(r"^(.+\.zip)$",relpath.name,re.IGNORECASE):
                 zipname = m.group(1)
                 with tempfile.NamedTemporaryFile("w+b") as fh:
                     # print(f"name = {fh.name}")
                     with zipfile.ZipFile(fh,"w") as zip2:
                         for c in  path.iterdir():                
-                            do_rec_make_zip(c,zip2,str(path))
-                    zip.write(str(fh.name),arcname=relpath)
+                            do_rec_make_zip(c,zip2,path)
+                    zip.write(fh.name,arcname=relpath)
             else:
                 for c in  path.iterdir():
                     do_rec_make_zip(c,zip,arcRoot)
