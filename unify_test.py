@@ -41,6 +41,16 @@ class UnifyTest(TestCase):
                         v("y"),a("g",v("x"))),{})
         self.assertEqual({ "y" : a("g",v("x")) }, subst)
 
+    def test_apply4(self):
+        subst = unify(a("f",v("x"),v("y"),v("z"),v("v"),v("w")),
+                      a("f",v("y"),v("z"),v("v"),v("w"),v("x")),
+                      {})
+        self.assertEqual({ "x" : v("y"),
+                           "y" : v("z"),
+                           "z" : v("v"),
+                           "v" : v("w")
+                          }, subst)
+
     def test_occurs1(self):
         subst = unify(v("x"),a("f",v("x")),{})
         self.assertEqual(None, subst)
