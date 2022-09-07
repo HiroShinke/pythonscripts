@@ -17,7 +17,7 @@ class Const(Term):
 @dataclass
 class App(Term):
     name : str
-    args : list[Term]
+    args : tuple[Term]
 
 def app(n,*args):
     return App(n,args)
@@ -62,3 +62,25 @@ def occurs_check(v,term,subst):
         return any(occurs_check(v, arg, subst) for arg in term.args)
     else:
         return False    
+
+
+def complete_subst(subst):
+    ret = {}
+    def subst_term_rec(term,check):
+        match term:
+            case Var(name):
+                if name not in check:
+                    return subst_term_rec(subst[name],check|{name})
+                else:
+                    return term
+            case App(name,args):
+                return App(name,
+                           tuple(map(lambda x: subst_term_rec(x,check),
+                                     args))
+                           )
+            case Const(c):
+                return term
+    for k in subst.keys():
+        ret[k] = subst_term_rec(subst[k],{k})
+    
+    return ret

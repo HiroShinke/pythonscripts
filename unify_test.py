@@ -50,7 +50,18 @@ class UnifyTest(TestCase):
                            "z" : v("v"),
                            "v" : v("w")
                           }, subst)
-
+    # a case from SICP
+    def test_apply5(self):
+        subst = unify(a("f",v("x"),v("x")),
+                      a("f",a("g",c("a"),v("y"),c("c")),
+                            a("g",c("a"),c("b"),v("z"))),
+                      {})
+        subst = complete_subst(subst)
+        self.assertEqual({ "x" : a("g",c("a"),c("b"),c("c")),
+                           "y" : c("b"),
+                           "z" : c("c")
+                          }, subst)
+        
     def test_occurs1(self):
         subst = unify(v("x"),a("f",v("x")),{})
         self.assertEqual(None, subst)
