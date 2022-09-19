@@ -2,8 +2,7 @@
 
 import sys
 from pathlib import Path
-import difflib
-import diffobj
+import diffutil
 import argparse
 
 def do_diff(fp,tp):
@@ -16,13 +15,26 @@ def do_diff(fp,tp):
     
 
 def do_difffile(f,t):
+
     print(f"---{f}")
     print(f"+++{t}")
-    ret = difflib.ndiff(list(f.open(mode='r')),
-                        list(t.open(mode='r')),
-                        charjunk=None)
-    ret = [ l for l in ret if l[0] != '?']
-    print(''.join(ret),end='')
+
+    seq1 = list(f.open(mode='r'))
+    seq2 = list(t.open(mode='r'))
+    
+    def match_func(i,j):
+        print("\t".join([" ",f'{i},{j}',f'{seq1[i]}']),end='')        
+    
+    def discard_a(i):
+        print("\t".join(["-",f'{i}',f'{seq1[i]}']),end='')
+
+    def discard_b(j):
+        print("\t".join(["+",f'{j}',f'{seq2[j]}']),end='')
+
+    diffutil.traverse_sequences(seq1,seq2,
+                                matchFunc=match_func,
+                                discardAFunc=discard_a,
+                                discardBFunc=discard_b)
 
 def do_diffdir(f,t):
 
@@ -38,11 +50,11 @@ def do_diffdir(f,t):
     def discard_b(j):
         print(f'{seq2[j]} only in {seq2[j].parent}')        
         
-    matcher = diffobj.traverse_sequences(seq1,seq2,
-                                         matchFunc=match_func,
-                                         discardAFunc=discard_a,
-                                         discardBFunc=discard_b,
-                                         keyFunc=lambda x: x.name)
+    diffutil.traverse_sequences(seq1,seq2,
+                                matchFunc=match_func,
+                                discardAFunc=discard_a,
+                                discardBFunc=discard_b,
+                                keyFunc=lambda x: x.name)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f"    ,type=str,  action='store')
