@@ -16,28 +16,39 @@ def do_diff(fp,tp):
 
 def do_difffile(f,t):
 
-    print(f"---{f}")
-    print(f"+++{t}")
 
     seq1 = list(f.open(mode='r'))
     seq2 = list(t.open(mode='r'))
+
+    diffOccurs = False
+    lines = []
     
     def match_func(i,j):
-        print("\t".join([" ",f'{i},{j}',f'{seq1[i]}']),end='')        
+        lines.append("\t".join([" ",f'{i},{j}',f'{seq1[i]}']))        
     
     def discard_a(i):
-        print("\t".join(["-",f'{i}',f'{seq1[i]}']),end='')
+        nonlocal diffOccurs
+        diffOccurs = True
+        lines.append("\t".join(["-",f'{i}',f'{seq1[i]}']))
 
     def discard_b(j):
-        print("\t".join(["+",f'{j}',f'{seq2[j]}']),end='')
+        nonlocal diffOccurs        
+        diffOccurs = True        
+        lines.append("\t".join(["+",f'{j}',f'{seq2[j]}']))
 
     diffutil.traverse_sequences(seq1,seq2,
                                 matchFunc=match_func,
                                 discardAFunc=discard_a,
                                 discardBFunc=discard_b)
+    if diffOccurs:
+        print(f"---{f}")
+        print(f"+++{t}")
+        sys.stdout.writelines(lines)
 
+
+        
 def do_diffdir(f,t):
-
+    
     seq1 = list( [ n1 for n1 in f.iterdir() ])
     seq2 = list( [ n2 for n2 in t.iterdir() ])
 
