@@ -4,14 +4,15 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
-import zipfile
+import ziputil
 import diffutil
 import io
 import re
 
 def do_diff(fp,tp,to_sort,of,func=lambda n: n):
     if fp.is_file() and tp.is_file():
-        if re.search(r"\.zip$",str(fp)) and re.search(r"\.zip$",str(tp)):
+        if ( re.search(r"\.zip$",str(fp),re.IGNORECASE) and
+             re.search(r"\.zip$",str(tp),re.IGNORECASE) ):
             do_diffzip(fp,tp,to_sort,of,func)
         else:
             do_difffile(fp,tp,to_sort,of,func)
@@ -21,16 +22,9 @@ def do_diff(fp,tp,to_sort,of,func=lambda n: n):
         print(f"uncomparable {fp} and {tp}",file=of)
 
 def do_diffzip(fp,tp,to_sort,of,func):
-    with fp.open("rb") as fh, tp.open("rb") as th:
-        fx = io.BytesIO(fh.read())
-        fzip = zipfile.ZipFile(fx)
-        fzip.filename = str(fp)
-        fr = zipfile.Path(fzip)
-        tx = io.BytesIO(th.read())
-        tzip = zipfile.ZipFile(tx)
-        tzip.filename = str(tp)
-        tr = zipfile.Path(tzip)
-        do_diff(fr,tr,to_sort,of,func)
+    fr = ziputil.pathFromZipContents(fp)
+    tr = ziputil.pathFromZipContents(tp)
+    do_diff(fr,tr,to_sort,of,func)
 
 def do_difffile(f,t,to_sort,of,func):
 
