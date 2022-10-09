@@ -45,10 +45,29 @@ def tree_to_zip(path,zip,arcRoot=None):
 
 
 def pathFromZipContents0(path):
+
+    """Create path opbject from zipfile.
+       where the zipfile is a real file on the file system.
+       Args:
+           path: path of the zipfile
+       Return:
+           path object which correspond to 
+           the root directory of items in the zipfile
+    """
     with zipfile.ZipFile(path) as zip:
         return zipfile.Path(zip)
                 
 def pathFromZipContents(path):
+
+    """Create path opbject from contents of zipfile,
+       where these contents is expanded on memory.
+       Args:
+           path: path of the zipfile
+       Return:
+           path object which correspond to 
+           the root directory of items in the zipfile
+    """
+
     with path.open("rb") as fh:
         contents = fh.read()
         xx = io.BytesIO(contents)
