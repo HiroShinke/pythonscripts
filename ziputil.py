@@ -14,6 +14,9 @@ def tree_to_zip(path,zip,arcRoot=None):
     """copy a directory tree into a zip archive.
        Args:
            path: path to file to add
+           if path is for a directory, all elements in the directory is added.
+           At that time if path name is ended with .zip, 
+           nested archive are created and added to the original zip archive.
            zip:  a zip archive to add files on
            arcRoot: path to directory root
            use to evaluate relative path for each file 
