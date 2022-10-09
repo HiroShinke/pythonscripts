@@ -43,6 +43,18 @@ def tree_to_zip(path,zip,arcRoot=None):
             for c in  path.iterdir():
                 tree_to_zip(c,zip,arcRoot)
 
+
+def pathFromZipContents0(path):
+    with zipfile.ZipFile(path) as zip:
+        return zipfile.Path(zip)
+                
+def pathFromZipContents(path):
+    with path.open("rb") as fh:
+        contents = fh.read()
+        xx = io.BytesIO(contents)
+        zip = zipfile.ZipFile(xx)
+        zip.filename = str(path)
+        return zipfile.Path(zip)
                 
 def do_rec_zipfile(path,proc,*args,**kwargs):
 
@@ -67,15 +79,10 @@ def do_rec_zipfile(path,proc,*args,**kwargs):
         for c in  path.iterdir():
             do_rec_zipfile(c,proc,*args,**kwargs)
     elif re.search(r"\.zip$",str(path)):
-        with path.open("rb") as fh:
-            contents = fh.read()
-            xx = io.BytesIO(contents)
-            zip = zipfile.ZipFile(xx)
-            zip.filename = str(path)
-            root = zipfile.Path(zip)
-            do_rec_zipfile(root,proc,*args,**kwargs)
+        root = pathFromZipContents(path)
+        do_rec_zipfile(root,proc,*args,**kwargs)
 
-            
+        
 def do_diff(fp,tp,diffproc=None):
 
     """diff to compare archives
@@ -107,17 +114,9 @@ def do_diffzip(fp,tp,diffproc=None):
     """diff to compare archives
        implementation of do_diff for the case of zip argument.
     """
-    
-    with fp.open("rb") as fh, tp.open("rb") as th:
-        fx = io.BytesIO(fh.read())
-        fzip = zipfile.ZipFile(fx)
-        fzip.filename = str(fp)
-        fr = zipfile.Path(fzip)
-        tx = io.BytesIO(th.read())
-        tzip = zipfile.ZipFile(tx)
-        tzip.filename = str(tp)
-        tr = zipfile.Path(tzip)
-        do_diff(fr,tr,diffproc)
+    fr = pathFromZipContents(fp)
+    tr = pathFromZipContents(tp)
+    do_diff(fr,tr,diffproc)
     
 def do_diffdir(f,t,diffproc=None):
 
