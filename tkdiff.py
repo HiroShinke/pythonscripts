@@ -4,20 +4,35 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
+import zipfile
 import diffutil
-
+import io
+import re
 
 def do_diff(fp,tp,to_sort,of,func=lambda n: n):
     if fp.is_file() and tp.is_file():
-        do_difffile(fp,tp,to_sort,of,func)
+        if re.search(r"\.zip$",str(fp)) and re.search(r"\.zip$",str(tp)):
+            do_diffzip(fp,tp,to_sort,of,func)
+        else:
+            do_difffile(fp,tp,to_sort,of,func)
     elif fp.is_dir() and tp.is_dir():
         do_diffdir(fp,tp,to_sort,of,func)
     else:
         print(f"uncomparable {fp} and {tp}",file=of)
-    
+
+def do_diffzip(fp,tp,to_sort,of,func):
+    with fp.open("rb") as fh, tp.open("rb") as th:
+        fx = io.BytesIO(fh.read())
+        fzip = zipfile.ZipFile(fx)
+        fzip.filename = str(fp)
+        fr = zipfile.Path(fzip)
+        tx = io.BytesIO(th.read())
+        tzip = zipfile.ZipFile(tx)
+        tzip.filename = str(tp)
+        tr = zipfile.Path(tzip)
+        do_diff(fr,tr,to_sort,of,func)
 
 def do_difffile(f,t,to_sort,of,func):
-
 
     seq1 = list(f.open(mode='r'))
     seq2 = list(t.open(mode='r'))
@@ -48,8 +63,8 @@ def do_difffile(f,t,to_sort,of,func):
                                 discardBFunc=discard_b,
                                 keyFunc=func)
     if diffOccurs:
-        print(f"---{f}",file=of)
-        print(f"+++{t}",file=of)
+        print(f"--- {f}",file=of)
+        print(f"+++ {t}",file=of)
         of.writelines(lines)
 
 def do_diffdir(f,t,to_sort,of,func):
@@ -77,8 +92,10 @@ def main():
     for arg in sys.argv: 
         print(arg)
 
-    topf = sys.argv[1]
-    topt = sys.argv[2]
+    argsnum = len(sys.argv)
+    topf = sys.argv[1] if argsnum > 1 else ""
+    topt = sys.argv[2] if argsnum > 2 else ""
+
     tmpfile = pathsToTempfile(topf,topt)
     
     root = tk.Tk()
