@@ -1,87 +1,94 @@
 
-import re
-
-# table from 
-# http://itdoc.hitachi.co.jp/manuals/3020/30203J3820/ISUS0268.HTM
-
-ASCIIEBCDIK="""\
-00 10 80 90 20 26 2D 6A 73 BF 77 79 7B 7D 24 30
-01 11 81 91 A1 AA 2F 6B B1 C0 7E 7A 41 4A 9F 31
-02 12 82 16 A2 AB 62 6C B2 C1 CD E0 42 4B 53 32
-03 13 83 93 A3 AC 63 6D B3 C2 CE E1 43 4C 54 33
-9C 9D 84 94 A4 AD 64 6E B4 C3 CF E2 44 4D 55 34
-09 0A 85 95 A5 AE 65 6F B5 C4 D0 E3 45 4E 56 35
-86 08 17 96 A6 AF 66 70 B6 C5 D1 E4 46 4F 57 36
-7F 87 1B 04 A7 A0 67 71 B7 C6 D2 E5 47 50 58 37
-97 18 88 98 A8 B0 68 72 B8 C7 D3 E6 48 51 59 38
-8D 19 89 99 A9 61 69 60 B9 C8 D4 E7 49 52 5A 39
-8E 92 8A 9A 5B 5D 7c 3A BA C9 D5 DA E8 EE F4 FA
-0B 8F 8B 9B 2E 5C 2C 23 74 75 78 DB E9 EF F5 FB
-0C 1C 8C 14 3C 2A 25 40 BB 76 D6 DC EA F0 F6 FC
-0D 1D 05 15 28 29 5F 27 BC CA D7 DD EB F1 F7 FD
-0E 1E 06 9E 2B 3B 3E 3D BD CB D8 DE EC f2 F8 FE
-0F 1f 07 1A 21 5e 3F 22 BE CC D9 DF ED F3 F9 FF
+""" Python Character Mapping Codec ebcdik
+    http://itdoc.hitachi.co.jp/manuals/3020/30203J3820/ISUS0268.HTM
 """
 
-dupcheck = set()
+import codecs
 
-tmptable     = []
-ebcdik2ascii = []
-mappingList  = []
 
-rows = ASCIIEBCDIK.splitlines()
-for i,r in enumerate(rows):
-    row = re.split(r"\s",r)
-    for j,c in enumerate(row):
-        code = int(c,16)
-        tmptable.append(code)
+class Codec(codecs.Codec):
 
-def charFromCode(x):
+    def encode(self,input,errors='strict'):
+        return codecs.charmap_encode(input,errors,encoding_table)
+
+    def decode(self,input,errors='strict'):
+        return codecs.charmap_decode(input,errors,decoding_table)
+
+class IncrementalEncoder(codecs.IncrementalEncoder):
+    def encode(self, input, final=False):
+        return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+
+class IncrementalDecoder(codecs.IncrementalDecoder):
+    def decode(self, input, final=False):
+        return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+
+class StreamWriter(Codec,codecs.StreamWriter):
+    pass
+
+class StreamReader(Codec,codecs.StreamReader):
+    pass
+
+### encodings module API
+def getregentry(name):
+    return codecs.CodecInfo(
+        name='ebcdik',
+        encode=Codec().encode,
+        decode=Codec().decode,
+        incrementalencoder=IncrementalEncoder,
+        incrementaldecoder=IncrementalDecoder,
+        streamreader=StreamReader,
+        streamwriter=StreamWriter,
+    )
+
+# mapping table for ebcdik to jis8
+ebcdik_table = [
+    0x00, 0x01, 0x02, 0x03, 0x9c, 0x09, 0x86, 0x7f, 
+    0x97, 0x8d, 0x8e, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 
+    0x10, 0x11, 0x12, 0x13, 0x9d, 0x0a, 0x08, 0x87, 
+    0x18, 0x19, 0x92, 0x8f, 0x1c, 0x1d, 0x1e, 0x1f, 
+    0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x17, 0x1b, 
+    0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x05, 0x06, 0x07, 
+    0x90, 0x91, 0x16, 0x93, 0x94, 0x95, 0x96, 0x04, 
+    0x98, 0x99, 0x9a, 0x9b, 0x14, 0x15, 0x9e, 0x1a, 
+    0x20, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 
+    0xa8, 0xa9, 0x5b, 0x2e, 0x3c, 0x28, 0x2b, 0x21, 
+    0x26, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xa0, 
+    0xb0, 0x61, 0x5d, 0x5c, 0x2a, 0x29, 0x3b, 0x5e, 
+    0x2d, 0x2f, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 
+    0x68, 0x69, 0x7c, 0x2c, 0x25, 0x5f, 0x3e, 0x3f, 
+    0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 0x70, 0x71, 
+    0x72, 0x60, 0x3a, 0x23, 0x40, 0x27, 0x3d, 0x22, 
+    0x73, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 
+    0xb8, 0xb9, 0xba, 0x74, 0xbb, 0xbc, 0xbd, 0xbe, 
+    0xbf, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 
+    0xc7, 0xc8, 0xc9, 0x75, 0x76, 0xca, 0xcb, 0xcc, 
+    0x77, 0x7e, 0xcd, 0xce, 0xcf, 0xd0, 0xd1, 0xd2, 
+    0xd3, 0xd4, 0xd5, 0x78, 0xd6, 0xd7, 0xd8, 0xd9, 
+    0x79, 0x7a, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 
+    0xe6, 0xe7, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf, 
+    0x7b, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 
+    0x48, 0x49, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 
+    0x7d, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 
+    0x51, 0x52, 0xee, 0xef, 0xf0, 0xf1, 0xf2, 0xf3, 
+    0x24, 0x9f, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 
+    0x59, 0x5a, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 
+    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 
+    0x38, 0x39, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
+]
+
+def jis8_char(x):
     try:
         chars = str(bytes((x,)),"cp932")
         if chars.isprintable():
-            pass
+            return chars
         else:
-            chars = " "
+            return chr(x)
     except Exception as e:
-        chars = " "
-    return chars
+        return chr(x)
 
-def printTable(table):
-    for i in range(0,16):
-        for j in range(0,16):
-            x = table[i*16 + j]
-            print(f"{x:02X} ",end="")
-        print("")            
-        for j in range(0,16):
-            x = table[i*16 + j]
-            print(f" {charFromCode(x)} ",end="")
-        print("")
+decoding_table = "".join([jis8_char(n) for n in ebcdik_table])
+encoding_table=codecs.charmap_build(decoding_table)
 
-def transposeTable(table):
-    ret = []
-    for i in range(0,16):
-        for j in range(0,16):
-            x = table[i + j*16]
-            ret.append(x)
-    return ret
-
-def reverseTable(table):
-    tuplelist = [(c,i) for i,c in enumerate(table)]
-    tuplelist2 = sorted(tuplelist)
-    return [ i for c,i in tuplelist2 ]
-
-
-ebcdik2ascii = transposeTable(tmptable)
-ascii2ebcdik = reverseTable(ebcdik2ascii)
-asciitable   = [ c for c in range(0,256) ]
-
-print("ASCII")
-printTable(asciitable)
-
-print("EBCDIK")
-printTable(ebcdik2ascii)
-
-
-
-      
+def register_self():
+    codecs.register(getregentry)
+    
