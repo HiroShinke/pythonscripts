@@ -29,6 +29,7 @@ class StreamReader(Codec,codecs.StreamReader):
     pass
 
 ### encodings module API
+@codecs.register
 def getregentry(name):
     return codecs.CodecInfo(
         name='ebcdik',
@@ -89,6 +90,4 @@ def jis8_char(x):
 decoding_table = "".join([jis8_char(n) for n in ebcdik_table])
 encoding_table=codecs.charmap_build(decoding_table)
 
-def register_self():
-    codecs.register(getregentry)
     
