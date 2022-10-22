@@ -49,29 +49,58 @@ def parse(path):
     contents = fh.read()
     for i,l in linesFromText(contents):
         print(f"{l}")
-        for k,v in tokenize(l):
+        for k,v in tokensiter(l):
             if k != "SKIP":
                 print(f"{k,v}")
-            
 
-def tokenize(l):
+def scanLiteral(l,pos):
+
+    regex1 = re.compile(r"'[^']*'")
+    regex2 = re.compile(r'"[^"]*"')
+    
+    if m := regex1.match(l,pos):
+        value = m.group()
+        start,end = m.span()
+        return value,end
+    elif m := regex2.match(l,pos):
+        value = m.group()
+        start,end = m.span()
+        return value,end        
+    else:
+        raise ValueError(f"invalid source string {l}{pos}")
+
+def tokensiter(l):
+
     token_specification = [
-        ('NUMBER',   r'\d+(\.\d+)?'),
-        ('SEPARATOR',    r'[=\+\-*/\(\)\.,:<>]'),
-        ('SEPARATOR2',    r'\.,;(=?\s)'),
-        ('LITERAL',    r'"[^"]*"'),
-        ('LITERAL2',   r"'[^']*'"),        
-        ('ID',       r'[\w-]+'),  
-        ('NEWLINE',  r'\n'),         
-        ('SKIP',     r'\s+'),     
-        ('MISMATCH', r'.'),          
+        ('NUMBER',     r'\d+(\.\d+)?'),
+        ('SEPARATOR',  r'[=\+\-*/\(\)\.,:<>]'),
+        ('SEPARATOR2', r'\.,;(=?\s)'),
+        ('QUOTE',      '["\']'),
+        # ('LITERAL',    r'"[^"]*"'),
+        # ('LITERAL2',   r"'[^']*'"),        
+        ('ID',         r'[\w-]+'),  
+        ('NEWLINE',    r'\n'),         
+        ('SKIP',       r'\s+'),     
+        ('MISMATCH',   r'.'),          
     ]
     tok_regex = '|'.join(f'(?P<{p}>{pat})' for p,pat in token_specification)
     regexp = re.compile(tok_regex)
-    for m in regexp.finditer(l):
-        kind  = m.lastgroup
-        value = m.group()
-        yield kind,value
+
+    pos = 0
+
+    while pos < len(l):
+        for m in regexp.finditer(l,pos):
+            kind  = m.lastgroup
+            value = m.group()
+            start,end = m.span()
+            if kind == "QUOTE":
+                value,end = scanLiteral(l,start)
+                pos = end
+                yield "LITERAL",value
+                break
+            else:
+                pos = end
+                yield kind,value
 
 def main():
     parser = argparse.ArgumentParser()
