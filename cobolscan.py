@@ -30,7 +30,7 @@ def linesFromText(sourceText):
         idx = 0
         for i,ser,a,b,com in lines:
             if a == "-":
-                acc += b
+                acc = do_continuation(acc,b)
             elif acc:
                 yield (idx,acc)
                 acc = b
@@ -42,7 +42,40 @@ def linesFromText(sourceText):
             yield (idx,acc)
 
     yield from srcLines(lines2)
+
+
+def do_continuation(s1,s2):
+
+    ret = ""
+    token_specification = [
+        ('OUTSIDE',     '[^\'"]+'),
+        ('LITERAL1',     "'[^']*'"),
+        ('LITERAL2',     '"[^"]*"'),
+        ('CONTINUE1',   "'[^']*"),
+        ('CONTINUE2',   '"[^"]*'),
+        ('MISMATCH',   r'.')   
+    ]
+    tok_regex = '|'.join(f'(?P<{p}>{pat})' for p,pat in token_specification)
+    regexp = re.compile(tok_regex)
+
+    literalCont = False
     
+    for m in regexp.finditer(s1):
+        kind  = m.lastgroup
+        value = m.group()
+        start,end = m.span()
+        if kind == "CONTINUE1" or kind == "CONTINUE2":
+            literalCont = True
+        else:
+            pass
+
+    if literalCont:
+        s2 = s2.lstrip()
+        return s1 + s2[1:]
+    else:
+        s1 = s1.rstrip()
+        s2 = s2.lstrip()
+        return s1 + s2
 
 def parse(path):
     fh = open(path)
@@ -69,6 +102,16 @@ def scanLiteral(l,pos):
     else:
         raise ValueError(f"invalid source string {l}{pos}")
 
+def scanPicString(l,pos):
+
+    regex = re.compile(r"\s+(?:IS\s+)?(\S+)(?<![.,;])")
+    if m := regex.match(l,pos):
+        value = m.group(1)
+        start,end = m.span(1)
+        return value,end
+    else:
+        raise ValueError(f"invalid source string {l}{pos}")
+    
 def tokensiter(l):
 
     token_specification = [
@@ -97,6 +140,12 @@ def tokensiter(l):
                 value,end = scanLiteral(l,start)
                 pos = end
                 yield "LITERAL",value
+                break
+            elif kind == "ID" and value == "PIC" or value == "PICTURE":
+                yield kind,value
+                value,end = scanPicString(l,end)
+                pos = end
+                yield "PICSTRING",value
                 break
             else:
                 pos = end
