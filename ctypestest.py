@@ -19,6 +19,7 @@ struct Point {
     int y;
 };
 
+char buff[256];
 
 void test1(int i){
     printf("test1 called: %d\n",i);
@@ -62,7 +63,20 @@ int test8(long *d){
     return 0;
 }
 
-    
+char * test9(){
+    strcpy(buff,"Hello, char *\n");
+    return buff;
+}
+
+int test10(){
+    int i = 0;
+    while( buff[i] ){
+        printf("x = %02x\n",buff[i]);
+        i++;
+    }
+    return printf("buff = %s\n",buff);
+}
+
 """
     make_csource("test1.c",srccode)
     args = "gcc test1.c -shared -o libctypestest.so".split(" ")
@@ -152,6 +166,15 @@ def main():
     for p in array:
         print(f"{p.x} {p.y}")
 
+    libtest.test9.restype = c_void_p;
+    voidp = libtest.test9()
+    libtest.test10()
+
+    buffp = cast(voidp,POINTER(c_char))
+    textp = create_string_buffer(b"Hello, c_char_p\n")
+    libc.strcpy(buffp,textp)
+
+    libtest.test10()
 
     
 if __name__ == "__main__":
