@@ -69,11 +69,6 @@ char * test9(){
 }
 
 int test10(){
-    int i = 0;
-    while( buff[i] ){
-        printf("x = %02x\n",buff[i]);
-        i++;
-    }
     return printf("buff = %s\n",buff);
 }
 
@@ -86,44 +81,9 @@ int test10(){
 class POINT(Structure):
     _fields_ = [("x", c_int),("y", c_int)]
 
+
+def test_long_pointer(libtest):
     
-def main():
-
-    make_lib()
-
-    libtest = cdll.LoadLibrary("libctypestest.so")
-
-
-    print(f"{libtest.test1(10)}")
-    print(f"{libtest.test2(10)}")
-
-    buffer = create_string_buffer(b"Hello, World!")
-    print(f"{buffer.value}")
-    print(f"{libtest.test3(buffer)}")
-    print(f"{buffer.value}")
-
-    TESTFUNC = CFUNCTYPE(c_int,c_int)
-
-    def testcallback(n):
-        print(f"callback called with {n}")
-        return n*2
-
-    funcobj = TESTFUNC(testcallback)
-
-    print(f"{libtest.test4(10,funcobj)}")
-
-    point = POINT(10,20)
-
-    print(f"{point.x},{point.y}")
-
-    print(f"{libtest.test5(point)}")
-
-    print(f"{libtest.test6(pointer(point))}")
-
-    print(f"{libtest.test7(pointer(point))}")
-
-    print(f"{point.x} {point.y}")
-
     lp = pointer(c_long(0x20000000))
     print(f"lp.contents = {lp.contents}")
 
@@ -138,10 +98,39 @@ def main():
     pn = cast(buff,POINTER(c_long))
     print(f"pn.contents = {pn.contents}")
 
-    
-    libc    = cdll.LoadLibrary("libSystem.B.dylib") 
+def test_callback(libtest):
+
+    TESTFUNC = CFUNCTYPE(c_int,c_int)
+
+    def callback(n):
+        print(f"callback called with {n}")
+        return n*2
+
+    funcobj = TESTFUNC(callback)
+
+    print(f"{libtest.test4(10,funcobj)}")
+
+
+def test_libc(libc):
+
     libc.printf(b"libc called %s, %d\n", b"Hello, libc", 10)
 
+    
+def test_structure(libtest,libc):
+
+    point = POINT(10,20)
+
+    print(f"{point.x},{point.y}")
+
+    print(f"{libtest.test5(point)}")
+
+    print(f"{libtest.test6(pointer(point))}")
+
+    print(f"{libtest.test7(pointer(point))}")
+
+    print(f"{point.x} {point.y}")
+
+    
     COMPFUNC = CFUNCTYPE(c_int, POINTER(POINT), POINTER(POINT))
 
     def cmp_point(p1,p2):
@@ -166,15 +155,57 @@ def main():
     for p in array:
         print(f"{p.x} {p.y}")
 
-    libtest.test9.restype = c_void_p;
-    voidp = libtest.test9()
+
+def test_returned_pointer(libtest,libc):
+
+    libtest.test9.restype = POINTER(c_char)
+    buffp = libtest.test9()
     libtest.test10()
 
-    buffp = cast(voidp,POINTER(c_char))
     textp = create_string_buffer(b"Hello, c_char_p\n")
     libc.strcpy(buffp,textp)
-
     libtest.test10()
+
+    libtest.test9.restype = c_void_p
+    voidp = libtest.test9()
+    buffp = cast(voidp,POINTER(c_char))
+
+    textp = create_string_buffer(b"Hello, c_void_p\n")
+    libc.strcpy(buffp,textp)
+    libtest.test10()
+
+def test_write_back_to_string_buffer(libtest):
+
+    buffer = create_string_buffer(b"Hello, World!")
+    print(f"{buffer.value}")
+    print(f"{libtest.test3(buffer)}")
+    print(f"{buffer.value}")
+
+    
+def main():
+
+    make_lib()
+
+    libtest = cdll.LoadLibrary("libctypestest.so")
+    libc    = cdll.LoadLibrary("libSystem.B.dylib") 
+
+    print(f"{libtest.test1(10)}")
+    print(f"{libtest.test2(10)}")
+
+    test_write_back_to_string_buffer(libtest)
+
+    test_callback(libtest)
+
+    test_libc(libc)
+    
+    test_long_pointer(libtest)
+
+    test_libc(libc)
+    
+    test_structure(libtest,libc)
+    
+    test_returned_pointer(libtest,libc)
+        
 
     
 if __name__ == "__main__":
