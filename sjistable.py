@@ -1,31 +1,34 @@
 
-
 import itertools
 
 def make_chars():
 
-    for c in range(0x8140,0xfff0):
-        try:
-            b = int.to_bytes(c,2,"big")
-            t = str(b,"cp932")
-            if t.isprintable():
-                yield f"{c:04X}:1:{t}"
-            else:
-                yield f"{c:04X}:0:xx"
-        except UnicodeDecodeError as e:
-            yield f"{c:04X}:0:xx"
+    for c in range(0x81,0x100):
+        r = range(0x40,0x100)
+        for d in r:
+            try:
+                i = (c << 8 ) | d
+                b = int.to_bytes(i,2,"big")
+                t = str(b,"cp932")
+                yield (i,t)
+            except UnicodeDecodeError as e:
+                yield (i,"??")
     
 def main():
 
-
-    chars = make_chars()
-    while m := itertools.islice(chars,8):
-        l = list(m)
-        if l:
-            print(" ".join(l))
-        else:
-            break
-    
+    try:
+        chars = make_chars()
+        while m := itertools.islice(chars,16):
+            l = list(m)
+            if l:
+                code  = l[0][0]
+                strs = [ f"{s:<3}" for c,s in l ]
+                print(f"{code:04X}: ", " ".join(strs))
+            else:
+                break
+    except BrokenPipeError:
+        return
+        
             
 if __name__ == "__main__":
     main()
