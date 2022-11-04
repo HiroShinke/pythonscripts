@@ -35,6 +35,7 @@ def set_clipboard_text(s):
         memmove(strp,btext,length)
         strp[length] = c_char(0)
 
+        windll.user32.EmptyClipboard()
         windll.user32.SetClipboardData(CF_TEXT,c_int(hglb))
 
         windll.kernel32.GlobalUnlock(c_int(hglb))
