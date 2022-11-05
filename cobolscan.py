@@ -23,7 +23,7 @@ def linesFromText(sourceText):
                 l[72:])
 
     lines2 = [ (i,*splitArea(l)) for (i,l) in lines1
-               if re.search(f"^.{6}[^*]",l) ]
+               if re.search(r"^.{6}[^*]",l) ]
 
     def srcLines(lines):
         acc = ""
