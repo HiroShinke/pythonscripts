@@ -1,6 +1,7 @@
 
 import sys
 import tkinter as tk
+import tkinter.scrolledtext
 from tkinter import ttk
 
 from ctypes import *
@@ -51,14 +52,43 @@ def main():
     root.title("showclip")
     
     frm = ttk.Frame(root, padding=10)
-    frm.grid()
+    frm.grid(sticky="nsew")
     
     lfunc=ttk.Label(frm, text="Func:")
-    lfuncv = tk.Text(frm, width=80)
+    lfuncv = tk.scrolledtext.ScrolledText(frm,height=10)
 
+    default_proc_text = r"""
+
+def default_proc(t):
+    
+    lines = t.splitlines()
+    lines = [ ">> " + l + "\r\n" for l in lines ]
+    return "".join(lines)
+
+"""
+    lfuncv.insert("1.0",default_proc_text)
     lfunc.grid(column=0,row=0,sticky="nsew")
     lfuncv.grid(column=1,row=0, columnspan=3, sticky="nsew")
 
+
+    lclip=ttk.Label(frm, text="Result:")
+    lclipv = tk.scrolledtext.ScrolledText(frm,height=10)
+
+    lclip.grid(column=0,row=1,sticky="nsew")
+    lclipv.grid(column=1,row=1, columnspan=3, sticky="nsew")
+
+
+    def test_clipboard():
+        functext = lfuncv.get("1.0","end -1c")
+        func = compileFuncObj(functext)
+        func = func if func else default_proc
+
+        b = get_clipboard_bytes()
+        t = str(b,"cp932")
+        text = func(t)
+        lclipv.delete("1.0","end -1c")
+        lclipv.insert("1.0",text)
+    
     def process_clipboard():
         functext = lfuncv.get("1.0","end -1c")
         func = compileFuncObj(functext)
@@ -69,12 +99,24 @@ def main():
         text = func(t)
         set_clipboard_text(text)
 
+    b1=ttk.Button(frm,text="Test",   command=test_clipboard)
     b2=ttk.Button(frm,text="Execute",command=process_clipboard)
     b3=ttk.Button(frm, text="Quit", command=root.destroy)
 
-    b2.grid(column=1, row=1, sticky="nsew")
-    b3.grid(column=2, row=1, sticky="nsew")
+    b1.grid(column=1, row=2, sticky="nsew")    
+    b2.grid(column=2, row=2, sticky="nsew")
+    b3.grid(column=3, row=2, sticky="nsew")
 
+    root.grid_columnconfigure(0,weight=1)
+    root.grid_rowconfigure(0,weight=1)
+
+    frm.grid_columnconfigure(1,weight=1)
+    frm.grid_columnconfigure(2,weight=1)
+    frm.grid_columnconfigure(3,weight=1)    
+
+    frm.grid_rowconfigure(0,weight=1)
+    frm.grid_rowconfigure(1,weight=1)
+    
     root.mainloop()
 
 def default_proc(t):
@@ -88,9 +130,7 @@ def compileFuncObj(text):
     exec(text,globals(),l)
     if l:
         return list(l.values())[0]
-
     
 if __name__ == "__main__":
     main()
-
 
