@@ -86,13 +86,11 @@ def parse(path):
     contents = fh.read()
     for i,l in linesFromText(contents):
         print(f"{l}")
-        for k in tokensiter(l):
-            if k.type != "SKIP":
-                try:
-                    print(f"     {k}")
-                except BrokenPipeError:
-                    return
-                
+        for t in tokensiter(l):
+            if t.type != "SKIP":
+                t.line = i
+                print(f"     {t}")
+
 def scanLiteral(l,pos):
 
     regex1 = re.compile(r"'[^']*'")
@@ -101,11 +99,11 @@ def scanLiteral(l,pos):
     if m := regex1.match(l,pos):
         value = m.group()
         start,end = m.span()
-        return Token("LITERAL",value,start,end),end
+        return Token("LITERAL",value,0,start),end
     elif m := regex2.match(l,pos):
         value = m.group()
         start,end = m.span()
-        return Token("LITERAL",value,start,end),end
+        return Token("LITERAL",value,0,start),end
     else:
         raise ValueError(f"invalid source string {l}{pos}")
 
@@ -115,7 +113,7 @@ def scanPicString(l,pos):
     if m := regex.match(l,pos):
         value = m.group(1)
         start,end = m.span(1)
-        return Token("PICTURE",value,start,end),end
+        return Token("PICTURE",value,0,start),end
     else:
         raise ValueError(f"invalid source string {l}{pos}")
     
@@ -142,26 +140,28 @@ def tokensiter(l):
             value = m.group()
             start,end = m.span()
             if kind == "QUOTE":
-                value,end = scanLiteral(l,start)
+                token,end = scanLiteral(l,start)
                 pos = end
-                yield value
+                yield token
                 break
             elif kind == "ID" and value == "PIC" or value == "PICTURE":
-                yield Token(kind,value,start,end)
-                value,end = scanPicString(l,end)
+                yield Token(kind,value,0,start)
+                token,end = scanPicString(l,end)
                 pos = end
-                yield value
+                yield token
                 break
             else:
                 pos = end
-                yield Token(kind,value,start,end)
+                yield Token(kind,value,0,start)
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--src", "-s", type=str, action="store")
     args = parser.parse_args()
-    parse(args.src)
-
+    try:
+        parse(args.src)
+    except BrokenPipeError:
+        exit(1)
 
 if __name__ == "__main__":
     main()
