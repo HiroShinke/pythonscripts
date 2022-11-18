@@ -82,10 +82,13 @@ def parse(path):
     contents = fh.read()
     for i,l in linesFromText(contents):
         print(f"{l}")
-        for k,v in tokensiter(l):
-            if k != "SKIP":
-                print(f"{k,v}")
-
+        for k in tokensiter(l):
+            if k.type != "SKIP":
+                try:
+                    print(f"{k}")
+                except BrokenPipeError:
+                    return
+                
 def scanLiteral(l,pos):
 
     regex1 = re.compile(r"'[^']*'")
@@ -94,11 +97,11 @@ def scanLiteral(l,pos):
     if m := regex1.match(l,pos):
         value = m.group()
         start,end = m.span()
-        return value,end
+        return Token("LITERAL",value,start,end),end
     elif m := regex2.match(l,pos):
         value = m.group()
         start,end = m.span()
-        return value,end        
+        return Token("LITERAL",value,start,end),end
     else:
         raise ValueError(f"invalid source string {l}{pos}")
 
@@ -108,7 +111,7 @@ def scanPicString(l,pos):
     if m := regex.match(l,pos):
         value = m.group(1)
         start,end = m.span(1)
-        return value,end
+        return Token("PICTURE",value,start,end),end
     else:
         raise ValueError(f"invalid source string {l}{pos}")
     
@@ -119,8 +122,6 @@ def tokensiter(l):
         ('SEPARATOR',  r'[=\+\-*/\(\)\.,:<>]'),
         ('SEPARATOR2', r'\.,;(=?\s)'),
         ('QUOTE',      '["\']'),
-        # ('LITERAL',    r'"[^"]*"'),
-        # ('LITERAL2',   r"'[^']*'"),        
         ('ID',         r'[\w-]+'),  
         ('NEWLINE',    r'\n'),         
         ('SKIP',       r'\s+'),     
@@ -139,17 +140,17 @@ def tokensiter(l):
             if kind == "QUOTE":
                 value,end = scanLiteral(l,start)
                 pos = end
-                yield "LITERAL",value
+                yield value
                 break
             elif kind == "ID" and value == "PIC" or value == "PICTURE":
-                yield kind,value
+                yield Token(kind,value,start,end)
                 value,end = scanPicString(l,end)
                 pos = end
-                yield "PICSTRING",value
+                yield value
                 break
             else:
                 pos = end
-                yield kind,value
+                yield Token(kind,value,start,end)
 
 def main():
     parser = argparse.ArgumentParser()
