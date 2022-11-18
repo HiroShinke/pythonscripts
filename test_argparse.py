@@ -47,7 +47,7 @@ class ArgParseTests(unittest.TestCase):
         args = parser.parse_args(["-f"])
         self.assertEqual(True,args.form)
 
-    def test_shortoptions(self):
+    def test_shortoptions1(self):
         parser = argparse.ArgumentParser()
         parser.add_argument("-f", action="store_true")
         parser.add_argument("-g", action="store_true")
@@ -57,6 +57,35 @@ class ArgParseTests(unittest.TestCase):
         self.assertEqual(True,args.g)
         self.assertEqual(True,args.i)
 
+    def test_shortoptions2(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-f")
+        parser.add_argument("-g", action="store_true")
+        parser.add_argument("-i", action="store_true")
+        args = parser.parse_args(["-faaa","-gi"])
+        self.assertEqual("aaa",args.f)
+        self.assertEqual(True,args.g)
+        self.assertEqual(True,args.i)
+
+    def test_shortoptions3(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-f", dest="from_file")
+        parser.add_argument("-g", action="store_true")
+        parser.add_argument("-i", action="store_true")
+        args = parser.parse_args(["-faaa","-gi"])
+        self.assertEqual("aaa",args.from_file)
+        self.assertEqual(True,args.g)
+        self.assertEqual(True,args.i)
+        
+    def test_positional(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("in_file")
+        parser.add_argument("out_file")
+        args = parser.parse_args(["a","b"])
+        self.assertEqual("a",args.in_file)
+        self.assertEqual("b",args.out_file)
+
+        
     def test_help1(self):
         parser = argparse.ArgumentParser( prog = "abc",
                                           description = "test for description",
