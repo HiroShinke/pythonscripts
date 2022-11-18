@@ -11,6 +11,10 @@ class Token:
     line: int
     column: int
 
+    def __str__(self):
+        return f"Token[{self.type},{self.value},{self.line},{self.column}]"
+
+
 def linesFromText(sourceText):
 
     lines = sourceText.splitlines()
@@ -85,7 +89,7 @@ def parse(path):
         for k in tokensiter(l):
             if k.type != "SKIP":
                 try:
-                    print(f"{k}")
+                    print(f"     {k}")
                 except BrokenPipeError:
                     return
                 
