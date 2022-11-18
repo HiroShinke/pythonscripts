@@ -47,7 +47,7 @@ class ArgParseTests(unittest.TestCase):
         args = parser.parse_args(["-f"])
         self.assertEqual(True,args.form)
 
-    def test_const(self):
+    def test_shortoptions(self):
         parser = argparse.ArgumentParser()
         parser.add_argument("-f", action="store_true")
         parser.add_argument("-g", action="store_true")
