@@ -10,7 +10,7 @@ import os
 def do_path(path,proc,*args):
     if re.search(r"\.git",path.name):
         pass
-    if path.is_dir():
+    elif path.is_dir():
         do_dir(path,proc,*args)
     else:
         do_file(path,proc,*args)
@@ -66,6 +66,11 @@ def main():
     args = parser.parse_args()
     pat = re.compile(args.e)
     n   = args.num
+    
+    if n > 1:
+        pass
+    else:
+        raise ValueError(f"num must be > 1")
     
     inputQueue = mp.Queue()
     outputQueue = mp.Queue()
