@@ -80,12 +80,9 @@ def main():
     for i in range(n - 1):
         p = mp.Process(target=work1, args=(inputQueue, outputQueue))
         procs.append(p)
-
-    q = mp.Process(target=work2, args=(outputQueue,n-1))
-
-    for p in procs:
         p.start()
 
+    q = mp.Process(target=work2, args=(outputQueue,n-1))
     q.start()
     
     for f in args.target:
