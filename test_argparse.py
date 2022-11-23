@@ -26,6 +26,12 @@ class ArgParseTests(unittest.TestCase):
         args = parser.parse_args(["-f","xxx"])
         self.assertEqual("xxx",args.form)
 
+    def test_keyword31(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-f", "--form")
+        args = parser.parse_args(["-f","xxx"])
+        self.assertEqual("xxx",args.form)
+        
     def test_keyword4(self):
         def splitComma(s): return re.split(r",",s)
         parser = argparse.ArgumentParser()
