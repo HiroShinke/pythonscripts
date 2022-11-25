@@ -27,6 +27,9 @@ def proc1(path,pat,queue):
 
 def work1(inputQueue,outputQueue):
 
+    print(f"work1.ppid={os.getppid()}",file=sys.stderr)
+    print(f"work1.pid={os.getpid()}",file=sys.stderr)
+
     while m := inputQueue.get():
         path,pat = m
         if path:
@@ -45,6 +48,9 @@ def work1(inputQueue,outputQueue):
         
 def work2(outputQueue,n):
 
+    print(f"work2.ppid={os.getppid()}",file=sys.stderr)
+    print(f"work2.pid={os.getpid()}",file=sys.stderr)
+
     while True:
         m = outputQueue.get()
         path, l = m
@@ -57,17 +63,15 @@ def work2(outputQueue,n):
         
 def main():
 
-    cpu_num = os.cpu_count()
-    
     parser = argparse.ArgumentParser()
     parser.add_argument("target",action='append')
     parser.add_argument("-e" )
-    parser.add_argument("-n", "--num", type=int, default=cpu_num)
+    parser.add_argument("-n", "--cpu_num", type=int, default=os.cpu_count())
     args = parser.parse_args()
     pat = re.compile(args.e)
-    n   = args.num
+    cpu_num  = args.cpu_num
     
-    if n > 1:
+    if cpu_num > 1:
         pass
     else:
         raise ValueError(f"num must be > 1")
@@ -77,12 +81,12 @@ def main():
 
     procs = []
     
-    for i in range(n - 1):
+    for i in range(cpu_num - 1):
         p = mp.Process(target=work1, args=(inputQueue, outputQueue))
         procs.append(p)
         p.start()
 
-    q = mp.Process(target=work2, args=(outputQueue,n-1))
+    q = mp.Process(target=work2, args=(outputQueue,cpu_num-1))
     q.start()
     
     for f in args.target:
