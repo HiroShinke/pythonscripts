@@ -4,7 +4,8 @@ import sys
 from pathlib import Path
 import argparse
 import re
-import multiprocessing as mp
+import threading as th
+import queue
 import os
 
 def do_path(path,proc,*args):
@@ -27,10 +28,10 @@ def proc1(path,pat,queue):
 
 def work1(inputQueue,outputQueue):
 
-    pid = os.getpid()
-
-    print(f"work1.ppid = {os.getppid()}",file=sys.stderr)
-    print(f"work1.pid = {pid}",file=sys.stderr)
+    tid = th.get_native_id()
+    
+    print(f"work1.pid = {os.getpid()}",file=sys.stderr)
+    print(f"work1.tid = {tid}",file=sys.stderr)
 
     file_num = 0
     
@@ -48,13 +49,13 @@ def work1(inputQueue,outputQueue):
         else:
             break
         
-    print(f"work1 end: {pid} file_num = {file_num}",file=sys.stderr)
-    outputQueue.put((False,pid))
+    print(f"work1 end: {tid} file_num = {file_num}",file=sys.stderr)
+    outputQueue.put((False,tid))
         
 def work2(outputQueue,n):
 
-    print(f"work2.ppid = {os.getppid()}",file=sys.stderr)
     print(f"work2.pid = {os.getpid()}",file=sys.stderr)
+    print(f"work2.tid = {th.get_native_id()}",file=sys.stderr)
 
     while True:
         m = outputQueue.get()
@@ -62,6 +63,7 @@ def work2(outputQueue,n):
         if path:
             print(f"{str(path)}: {l}",end="")
         else:
+            print(f"work2: work1 end: thread = {l}",file=sys.stderr)            
             n -= 1
             if n == 0:
                 break
@@ -83,17 +85,17 @@ def main():
     else:
         raise ValueError(f"num must be > 1")
     
-    inputQueue = mp.Queue()
-    outputQueue = mp.Queue()
+    inputQueue = queue.Queue()
+    outputQueue = queue.Queue()
 
     procs = []
     
     for i in range(cpu_num - 1):
-        p = mp.Process(target=work1, args=(inputQueue, outputQueue))
+        p = th.Thread(target=work1, args=(inputQueue, outputQueue))
         procs.append(p)
         p.start()
 
-    q = mp.Process(target=work2, args=(outputQueue,cpu_num-1))
+    q = th.Thread(target=work2, args=(outputQueue,cpu_num-1))
     q.start()
     
     for f in args.target:
