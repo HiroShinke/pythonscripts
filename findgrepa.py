@@ -69,7 +69,7 @@ async def work2(outputQueue,n):
             if n == 0:
                 break
 
-async def main_(inputQueue,outputQueue,targets,pat,cpu_num):
+async def main_async(inputQueue,outputQueue,targets,pat,cpu_num):
 
     tasks = []
     
@@ -109,7 +109,7 @@ def main():
     inputQueue = asyncio.Queue()
     outputQueue = asyncio.Queue()
 
-    asyncio.run(main_(inputQueue,outputQueue,args.target,pat,cpu_num))
+    asyncio.run(main_async(inputQueue,outputQueue,args.target,pat,cpu_num))
         
 if __name__ == "__main__":
     main()
