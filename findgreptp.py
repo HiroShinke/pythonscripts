@@ -5,7 +5,7 @@ from pathlib import Path
 import argparse
 import re
 import os
-import multiprocessing as mp
+import queue
 import concurrent.futures
 
 def do_path(path,proc,*args):
@@ -84,8 +84,8 @@ def main():
     else:
         raise ValueError(f"num must be > 1")
     
-    inputQueue = mp.Queue()
-    outputQueue = mp.Queue()
+    inputQueue = queue.Queue()
+    outputQueue = queue.Queue()
 
     futures = set()
 
