@@ -21,27 +21,31 @@ class TestAnalyzer(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree("testanalyze")
-
+        
     def test_basic(self):
 
         FILES = [
             ("testanalyze/base/a",
+             "cobol",
              "call b",
              "call c"
              ),
             ("testanalyze/base/b",
+             "cobol",
              "call b1",
              "call d lib"
              ),
             ("testanalyze/lib/c",
+             "cobol",
              "call c1",
              "call d"
              ),
             ("testanalyze/base/d",
+             "cobol"
              ),
             ("testlist.txt",
-             "type1 a lib",
-             "type1 b"
+             "call a lib",
+             "call b"
              )
         ]
 
@@ -50,24 +54,24 @@ class TestAnalyzer(unittest.TestCase):
         ret = subprocess.call( "python3 analyzer.py "
                                "--src testanalyze "
                                "--out testout.txt "
+                               "--parsers parsers "
                                "--start testlist.txt".split(" "))
         self.assertEqual(0,ret)
         
         CONTENTS = """\
-Start: type1,a,lib -> testanalyze/base/a
+Start: call,a,lib -> ('testanalyze/base/a', 'cobol')
 Rel: testanalyze/base/a -> ('call', 'b', Env())
 Rel: testanalyze/base/a -> ('call', 'c', Env())
-Start: call,b,lib -> testanalyze/base/b
+Start: call,b,lib -> ('testanalyze/base/b', 'cobol')
 Rel: testanalyze/base/b -> ('call', 'b1', Env())
 Rel: testanalyze/base/b -> ('call', 'd', Env('lib'))
 Start: call,b1,lib -> None
-Start: call,d,lib;lib -> testanalyze/base/d
-Start: call,c,lib -> testanalyze/lib/c
+Start: call,d,lib -> ('testanalyze/base/d', 'cobol')
+Start: call,c,lib -> ('testanalyze/lib/c', 'cobol')
 Rel: testanalyze/lib/c -> ('call', 'c1', Env())
 Rel: testanalyze/lib/c -> ('call', 'd', Env())
 Start: call,c1,lib -> None
-Start: call,d,lib -> testanalyze/base/d
-Start: type1,b, -> testanalyze/base/b
+Start: call,b, -> ('testanalyze/base/b', 'cobol')
 Rel: testanalyze/base/b -> ('call', 'b1', Env())
 Rel: testanalyze/base/b -> ('call', 'd', Env('lib'))
 Start: call,b1, -> None
@@ -76,7 +80,7 @@ Start: call,b1, -> None
         
         with open("testout.txt") as fh:
             self.assertEqual(CONTENTS,fh.read())
-        
+            
 if __name__ == "__main__":
     unittest.main()
             

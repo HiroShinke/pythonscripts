@@ -2,6 +2,7 @@
 
 import argparse
 from pathlib import Path
+import importlib
 import re
 import sys
 
@@ -13,6 +14,7 @@ class Env:
         self._env = []
         for s in strenv:
             if s is None: continue
+            if s == "" : continue
             for e in s.split(";"):
                 self._env.append(e)
 
@@ -39,7 +41,10 @@ class Env:
             pass
         else:
             raise TypeError(f"Env.join: self={self}, other={other}")
-        return Env(*(self._env),*(other._env))
+
+        items = list(dict.fromkeys([*(self._env),
+                                    *(other._env)]))
+        return Env(*items)
         
         
 def build_dirs(pathes):
@@ -55,36 +60,46 @@ def build_dirs(pathes):
     return ret
 
 
-FIND_NAME = {}
+TRACE_REC = {}
 
 def trace_rec(kind,name,envs,roots):
 
-    if ret := FIND_NAME.get((kind,name,envs),None):
+    if ret := TRACE_REC.get((kind,name,envs),None):
         return ret
 
     roots2 = adjust_path(kind,envs,roots)
-    p = find_path(kind,name,roots2)
-    
-    print(f"Start: {kind},{name},{envs} -> {p}",file=OUTFH)
-    FIND_NAME[(kind,name,envs)] = p
+    ret = find_path(kind,name,roots2)
 
-    if p:
-        for k,n,e in get_names(p):
+    print(f"Start: {kind},{name},{envs} -> {ret}",file=OUTFH)
+    TRACE_REC[(kind,name,envs)] = ret
+
+    if ret:
+        p,subk = ret
+        for k,n,e in get_names(p,subk):
             envs2 = e.join(envs)
             q = trace_rec(k,n,envs2,roots)
-            # print(f"Rel: {p} -> {q}",file=OUTFH)
 
-    return p
+    return ret
 
-def get_names(p):
+GET_NAMES = {}
 
-    ret = []
-    with open(p) as fh:
-        for l in fh.read().splitlines():
-            if m := re.search(r"^(\S+)\s+(\S+)(?:\s+(\S+))?$",l):
-                cmd,name,envs = m.groups()
-                ret.append((cmd,name,Env(envs)))
-                print(f"Rel: {p} -> {(cmd,name,Env(envs))}",file=OUTFH)
+def get_names(p,subk):
+
+    if ret := GET_NAMES.get(p,None):
+        for cmd,name,envs in ret:
+            print(f"Rel: {p} -> {(cmd,name,envs)}",file=OUTFH)
+        return ret
+
+    if mod := LANG_HANDLER.get(subk):
+        ret = mod.getName(p)
+        ret = [ (cmd,name,Env(env)) for cmd,name,env in ret ]
+    else:
+        ret = []
+
+    for cmd,name,envs in ret:
+        print(f"Rel: {p} -> {(cmd,name,envs)}",file=OUTFH)
+    
+    GET_NAMES[p] = ret
     return ret
                 
 
@@ -95,16 +110,50 @@ def find_path(kind,name,roots):
 
     def helper(p):
         if p.name == name:
-            return str(p)
+            if handlers := FIND_HANDLER.get(kind,None):
+                for mod in handlers:
+                    if sub := mod.checkPath(p):
+                        return (str(p),sub)
+                return None
+            else:
+                return None
         else:
             return None
 
     for r in roots:
-        if p := do_file_rec1(Path(r),helper):
-            return p
+        if ret := do_file_rec1(Path(r),helper):
+            return ret
 
     return None
 
+
+FIND_HANDLER = {}
+LANG_HANDLER = {}
+
+def read_modules(dir,find_handlers,lang_handlers):
+
+    p = Path(dir)
+    base = p.name 
+    
+    for c in p.iterdir():
+        if c.suffix != ".py": continue
+        name = c.stem
+        print(f"name = {name}")
+        mod = importlib.import_module(base + "." + name)
+        register_multi(find_handlers,mod.getType(),mod)
+        lang_handlers[mod.getLang()] = mod
+
+def register_multi(dict,k,v):
+
+    if e := dict.get(k,None):
+        pass
+    else:
+        e = []
+        dict[k] = e
+
+    e.append(v)
+
+    
 def main():
 
     global OUTFH
@@ -114,6 +163,7 @@ def main():
     parser.add_argument("--start_list","-l")
     parser.add_argument("--debug",action="store_true")
     parser.add_argument("--out","-o")
+    parser.add_argument("--parsers")
     args = parser.parse_args()
 
     srcs = args.src
@@ -124,7 +174,14 @@ def main():
     else:
         OUTFh = sys.stdout
 
-    rootdirs = build_dirs(srcs)
+    parsers = args.parsers
+        
+    if parsers:
+        read_modules(parsers,FIND_HANDLER,LANG_HANDLER)
+
+    if srcs:
+        rootdirs = build_dirs(srcs)
+
     print(f"rootdirs = {[str(r) for r in rootdirs]}",file=sys.stderr)
     
     with open(start_list) as fh:
