@@ -55,20 +55,29 @@ class Pred(Parser):
 
 class Seq(Parser):
 
-    def __init__(self,*parsers):
+    def __init__(self,*parsers,splicing=False):
         self.parsers = [ p for p in parsers]
+        self._splicing = splicing
 
     def parse(self,s,i):
         ret = []
         for p in self.parsers:
             match p.parse(s,i):
                 case Success(v,j):
-                    ret.append(v)
+                    if (self._splicing and
+                        isinstance(v,list)):
+                        ret.extend(v)
+                    else:
+                        ret.append(v)
                     i = j
                 case _ as fail:
                     return fail
         return Success(ret,i)
-                
+
+    def splicing(self,splicing=True):
+        self._splicing = splicing
+        return self
+    
 class Or(Parser):
 
     def __init__(self,*parsers):
@@ -100,8 +109,9 @@ class Action(Parser):
 
 class Many(Parser):
 
-    def __init__(self,p,key):
+    def __init__(self,p,key,splicing=False):
         self.p    = p
+        self._splicing = splicing
         match key:
             case int(n):
                 self.min = n
@@ -125,7 +135,11 @@ class Many(Parser):
         while True:
             match self.p.parse(s,i):
                 case Success(v,j):
-                    ret.append(v)
+                    if (self._splicing and
+                        isinstance(v,list)):
+                        ret.extend(v)
+                    else:
+                        ret.append(v)
                     i = j
                     if self.max == len(ret):
                         break
@@ -137,7 +151,10 @@ class Many(Parser):
         else:
             return Failure(i)
 
-            
+    def splicing(self,splicing=True):
+        self._splicing = splicing
+        return self
+        
 class Recursive(Parser):
 
     def __init__(self):

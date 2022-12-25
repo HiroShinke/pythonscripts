@@ -152,7 +152,18 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(Failure(3),ret)
 
         
+    def test_splicing(self):
+
+        expr = Recursive()
         
+        item = charP("1")
+        expr <<= (item + charP("+") + expr).splicing() | item
+
+        ret = expr.parse("1+1+1",0)
+        self.assertEqual(Success(["1","+","1","+","1"],5),ret)
+
+        ret = expr.parse("1+1+1+1",0)
+        self.assertEqual(Success(["1","+","1","+","1","+","1"],7),ret)
         
 if __name__ == "__main__":
     unittest.main()
