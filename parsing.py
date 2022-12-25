@@ -8,12 +8,15 @@ SUCCESS = True
 FAILED  = False
 
 class Parser(abc.ABC):
+    
     @abc.abstractmethod
     def parse(self,seq,i):
         pass
 
-    def __call__(self,*args,**keys):
-        return self.parser(*args,**keys)
+    def __call__(self,keys):
+        def helper(v):
+            return v.__getitem__(keys)
+        return Action(self,helper)
 
     def __add__(self,b):
         if isinstance(self,Seq):
