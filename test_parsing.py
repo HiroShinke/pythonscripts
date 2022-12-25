@@ -249,18 +249,18 @@ class TestParsing(unittest.TestCase):
 
         def applyOp(v):
             m,op,cont = v
-            def func(acc,op2):
+            def helper(acc,op2):
                 func = opdict[op2]
                 acc2 = func(acc,int(m))
                 return cont(acc2,op)
-            return func
+            return helper
 
         def applyInit(m):
-            def func(acc,op2):
+            def helper(acc,op2):
                 func = opdict[op2]
                 acc2 = func(acc,int(m))
                 return acc2
-            return func
+            return helper
         
         def evalMult(f): return f(1,"*")
         def evalAdd(f): return f(0,"+")
