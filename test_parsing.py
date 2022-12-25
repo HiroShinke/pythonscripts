@@ -2,6 +2,7 @@
 
 from parsing import *
 import unittest
+import operator
 
 
 def charP(c):
@@ -164,7 +165,76 @@ class TestParsing(unittest.TestCase):
 
         ret = expr.parse("1+1+1+1",0)
         self.assertEqual(Success(["1","+","1","+","1","+","1"],7),ret)
+
+
+    def test_expr(self):
+
+        expr = Recursive()
+        term = Recursive()
         
+        item = charP("1")
+        term <<= (item + charP("*") + term).splicing() | item
+        expr <<= (term + charP("+") + expr).splicing() | term
+
+        ret = expr.parse("1+1*1+1",0)
+        self.assertEqual(Success(["1","+","1","*","1","+","1"],7),ret)
+
+        term <<= item + charP("*") + term | item
+        expr <<= term + charP("+") + expr | term
+
+        ret = expr.parse("1+1*1+1",0)
+        self.assertEqual(Success(["1","+",[["1","*","1"],"+","1"]],7),ret)
+
+
+    def test_expr2(self):
+
+        expr = Recursive()
+        term = Recursive()
+
+        opdict = {
+            "+" : operator.add,
+            "-" : operator.sub,            
+            "*" : operator.mul,
+            "/" : operator.truediv
+            }
+
+        def applyOp(v):
+            match v:
+                case (m,op,cont):
+                    def func(acc,op2):
+                        func = opdict[op2]
+                        acc2 = func(acc,int(m))
+                        return cont(acc2,op)
+                    return func
+                case m:
+                    def func(acc,op2):
+                        func = opdict[op2]
+                        acc2 = func(acc,int(m))
+                        return acc2
+                    return func
+
+        def evalMult(f):
+            return f(1,"*")
+
+        def evalAdd(f):
+            return f(0,"+")
+        
+        item = charP("1")
+        term <<= ( (item + regexpP(r"[*/]") + term) >> applyOp |
+                   item >> applyOp )
+        term2 = term >> evalMult
+        expr <<= ( (term2 + regexpP(r"[\+\-]") + expr) >> applyOp  |
+                   term2 >> applyOp )
+        expr2 = expr >> evalAdd
+
+        ret = expr2.parse("1+1*1+1",0)
+        self.assertEqual(Success(3,7),ret)
+
+        ret = expr2.parse("1-1*1+1",0)
+        self.assertEqual(Success(1,7),ret)
+        
+
+                
 if __name__ == "__main__":
     unittest.main()
 
