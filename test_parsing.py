@@ -232,8 +232,64 @@ class TestParsing(unittest.TestCase):
 
         ret = expr2.parse("1-1*1+1",0)
         self.assertEqual(Success(1,7),ret)
-        
 
+
+    def test_expr3(self):
+
+        expr = Recursive()
+        term = Recursive()
+        expr2 = Recursive()
+        
+        opdict = {
+            "+" : operator.add,
+            "-" : operator.sub,            
+            "*" : operator.mul,
+            "/" : operator.truediv
+            }
+
+        def applyOp(v):
+            m,op,cont = v
+            def func(acc,op2):
+                func = opdict[op2]
+                acc2 = func(acc,int(m))
+                return cont(acc2,op)
+            return func
+
+        def applyInit(m):
+            def func(acc,op2):
+                func = opdict[op2]
+                acc2 = func(acc,int(m))
+                return acc2
+            return func
+        
+        def evalMult(f): return f(1,"*")
+        def evalAdd(f): return f(0,"+")
+            
+        item = ( regexpP(r"\d+") | 
+                 (charP("(") + expr2 + charP(")"))(1) )
+
+        term <<= ( (item + regexpP(r"[*/]") + term) >> applyOp |
+                    item >> applyInit
+                  )
+        term2 = term >> evalMult
+
+        expr <<= ( (term2 + regexpP(r"[\+\-]") + expr) >> applyOp  |
+                    term2 >> applyInit
+                  )
+        expr2 <<= expr >> evalAdd
+
+        ret = expr2.parse("1+1*1+1",0)
+        self.assertEqual(Success(3,7),ret)
+
+        ret = expr2.parse("1-1*1+1",0)
+        self.assertEqual(Success(1,7),ret)
+
+        ret = expr2.parse("1-(1+1)+1",0)
+        self.assertEqual(Success(0,9),ret)
+
+        ret = expr2.parse("(1+2)*(3+4)",0)
+        self.assertEqual(Success(21,11),ret)
+        
                 
 if __name__ == "__main__":
     unittest.main()
