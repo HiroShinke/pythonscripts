@@ -335,12 +335,32 @@ class TestParsing(unittest.TestCase):
 
         ret = expr2.parse("(1+2)*(3+4)",0)
         self.assertEqual(Success(21,11),ret)
+
+    def test_expr5(self):
+
+        expr = Recursive()
         
+        addOp = ( strP("+") >> (lambda _: operator.add)| 
+                  strP("-") >> (lambda _: operator.sub) )
+
+        def func1(x,op,t): return op(x,int(t))
+        def func2(tstr): return int(tstr)
+
+        term = regexpP(r"\d+")
+        expr <<= ((expr + addOp + term) >> func1 |
+                  term >> func2
+                  )
+
+        ret = expr.parse("1+1+1+1",0)
+        self.assertEqual(Success(4,7),ret)
+        ret = expr.parse("1-1+1+1",0)
+        self.assertEqual(Success(2,7),ret)
+
                 
 if __name__ == "__main__":
     unittest.main()
 
-    
-    
+
+
 
     

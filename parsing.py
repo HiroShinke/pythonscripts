@@ -31,7 +31,12 @@ class Parser(abc.ABC):
             return Or(self,b)
         
     def __rshift__(self,func):
-         return Action(self,func)
+        return Action(self,func)
+
+    def __lshift__(self,func):
+        def helper(v):
+            return func(*v)
+        return Action(self,helper)
 
     def __getitem__(self,key):
          return Many(self,key)
@@ -171,8 +176,40 @@ class Recursive(Parser):
                 return fail
     
     def __ilshift__(self,q):
-        self.p = q
+
+        if ( isinstance(q,Or) and
+             isinstance(q.parsers[0],Action) and
+             isinstance(q.parsers[0].p,Seq) and
+             q.parsers[0].p.parsers[0] == self ):
+            self.do_reft_recursion(q)
+        else:
+            self.p = q
+
         return self
+
+    def do_reft_recursion(self,q):
+
+        first,second = q.parsers
+        func1 = first.func
+        func2 = second.func
+
+        expr,*rest = first.p.parsers
+        term       = second.p
+
+        alpha = Seq(*rest)
+        expr2 = Recursive()
+        expr2  <<= ( alpha + expr2 <<
+                     ( lambda op,t,cont: (lambda x: cont(func1(x,op,t))) ) |
+                     Empty(lambda x: x) )
+        self.p = term + expr2      << (lambda a,cont: cont(func2(a)))
+        
+class Empty(Parser):
+
+    def __init__(self,c=None):
+        self.c    = c
+
+    def parse(self,s,i):
+        return Success(self.c,i)
 
 
 ################################################################################
