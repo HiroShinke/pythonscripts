@@ -336,7 +336,7 @@ class TestParsing(unittest.TestCase):
         ret = expr2.parse("(1+2)*(3+4)",0)
         self.assertEqual(Success(21,11),ret)
 
-    def test_expr5(self):
+    def test_left_recursion1(self):
 
         expr = Recursive()
         
@@ -356,6 +356,42 @@ class TestParsing(unittest.TestCase):
         ret = expr.parse("1-1+1+1",0)
         self.assertEqual(Success(2,7),ret)
 
+
+    def test_left_recursion2(self):
+
+        expr = Recursive()
+        term = Recursive()
+        
+        addOp = ( strP("+") >> (lambda _: operator.add)| 
+                  strP("-") >> (lambda _: operator.sub) )
+
+        mulOp = ( strP("*") >> (lambda _: operator.mul) | 
+                  strP("/") >> (lambda _: operator.truediv) )
+
+        def func1(x,op,t): return op(x,int(t))
+        def func2(tstr): return int(tstr)
+
+        item = ( regexpP(r"\d+") | 
+                 (charP("(") + expr + charP(")"))(1) )
+
+        term <<= ((term + mulOp + item) >> func1 |
+                  item >> func2
+                  )
+        expr <<= ((expr + addOp + term) >> func1 |
+                  term >> func2
+                  )
+
+        ret = expr.parse("1+1*1+1",0)
+        self.assertEqual(Success(3,7),ret)
+
+        ret = expr.parse("1-1*1+1",0)
+        self.assertEqual(Success(1,7),ret)
+
+        ret = expr.parse("1-(1+1)+1",0)
+        self.assertEqual(Success(0,9),ret)
+
+        ret = expr.parse("(1+2)*(3+4)",0)
+        self.assertEqual(Success(21,11),ret)
                 
 if __name__ == "__main__":
     unittest.main()
