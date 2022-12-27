@@ -298,16 +298,9 @@ class TestParsing(unittest.TestCase):
         
         def applyOp(v):
             m,op,cont = v
-            def helper(acc,op2):
-                acc2 = op2(acc,int(m))
-                return cont(acc2,op)
-            return helper
+            return (lambda acc,op2: cont(op2(acc,int(m)),op) )
 
-        def applyInit(m):
-            def helper(acc,op2):
-                acc2 = op2(acc,int(m))
-                return acc2
-            return helper
+        def applyInit(m): return (lambda acc,op2: op2(acc,int(m)))
         
         def evalMult(f): return f(1,operator.mul)
         def evalAdd(f): return f(0,operator.add)
