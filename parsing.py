@@ -198,11 +198,16 @@ class Recursive(Parser):
 
         alpha = Seq(*rest)
         expr2 = Recursive()
-        expr2  <<= ( alpha + expr2 <<
-                     ( lambda op,t,cont: (lambda x: cont(func1(x,op,t))) ) |
-                     Empty(lambda x: x) )
+
+        def helper(v):
+            *args,cont = v
+            def tmpfunc(x):
+                return cont(func1(x,*args))
+            return tmpfunc
+
+        expr2  <<= ( alpha + expr2 >> helper | Empty(lambda x: x) )
         self.p = term + expr2      << (lambda a,cont: cont(func2(a)))
-        
+
 class Empty(Parser):
 
     def __init__(self,c=None):
