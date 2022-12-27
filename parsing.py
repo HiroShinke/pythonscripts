@@ -181,13 +181,13 @@ class Recursive(Parser):
              isinstance(q.parsers[0],Action) and
              isinstance(q.parsers[0].p,Seq) and
              q.parsers[0].p.parsers[0] == self ):
-            self.do_reft_recursion(q)
+            self.do_left_recursion(q)
         else:
             self.p = q
 
         return self
 
-    def do_reft_recursion(self,q):
+    def do_left_recursion(self,q):
 
         first,second = q.parsers
         func1 = first.func
