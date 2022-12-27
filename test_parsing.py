@@ -362,23 +362,23 @@ class TestParsing(unittest.TestCase):
         expr = Recursive()
         term = Recursive()
         
-        addOp = ( strP("+") >> (lambda _: operator.add)| 
-                  strP("-") >> (lambda _: operator.sub) )
+        addOp = ( strP("+") >> constAction(operator.add)|
+                  strP("-") >> constAction(operator.sub) )
 
-        mulOp = ( strP("*") >> (lambda _: operator.mul) | 
-                  strP("/") >> (lambda _: operator.truediv) )
+        mulOp = ( strP("*") >> constAction(operator.mul) | 
+                  strP("/") >> constAction(operator.truediv) )
 
-        def func1(x,op,t): return op(x,int(t))
+        def func1(x,op,t): return op(x,t)
         def func2(tstr): return int(tstr)
 
-        item = ( regexpP(r"\d+") | 
+        item = ( regexpP(r"\d+") >> func2 | 
                  (charP("(") + expr + charP(")"))(1) )
 
         term <<= ((term + mulOp + item) >> func1 |
-                  item >> func2
+                  item
                   )
         expr <<= ((expr + addOp + term) >> func1 |
-                  term >> func2
+                  term
                   )
 
         ret = expr.parse("1+1*1+1",0)

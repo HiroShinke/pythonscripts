@@ -51,6 +51,8 @@ class Success:
 class Failure:
     ind   : int
 
+def constAction(c):
+    return lambda _: c
 
 class Pred(Parser):
     def __init__(self,pred):
@@ -169,12 +171,8 @@ class Recursive(Parser):
         self.p    = None
 
     def parse(self,s,i):
-        match self.p.parse(s,i):
-            case Success(v,j):
-                return Success(v,j)
-            case _ as fail:
-                return fail
-    
+        return self.p.parse(s,i)
+
     def __ilshift__(self,q):
 
         if ( isinstance(q,Or) and
@@ -190,11 +188,9 @@ class Recursive(Parser):
     def do_left_recursion(self,q):
 
         first,second = q.parsers
-        func1 = first.func
-        func2 = second.func
-
-        expr,*rest = first.p.parsers
-        term       = second.p
+        func1        = first.func
+        term         = second
+        expr,*rest   = first.p.parsers
 
         alpha = Seq(*rest)
         expr2 = Recursive()
@@ -205,8 +201,9 @@ class Recursive(Parser):
                 return cont(func1(x,*args))
             return tmpfunc
 
-        expr2  <<= ( alpha + expr2 >> helper | Empty(lambda x: x) )
-        self.p = term + expr2      << (lambda a,cont: cont(func2(a)))
+        expr2  <<= ( alpha + expr2 >> helper |
+                     Empty() >> constAction(lambda x: x) )
+        self.p = term + expr2  << (lambda a,cont: cont(a))
 
 class Empty(Parser):
 
