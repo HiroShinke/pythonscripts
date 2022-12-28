@@ -3,6 +3,7 @@
 from parsing import *
 import unittest
 import operator
+import re
 
 
 def charP(c):
@@ -458,6 +459,29 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(Success([["1","+","2"],"*",["3","+","4"]],11),ret)
         
 
+
+    def test_select_list(self):
+
+        expr = Recursive()
+        term = Recursive()
+
+        def kw(str): return regexpP(rf"\s*({str})",group=1,flags=re.I)
+        
+        word = regexpP(r"\s*(\w+)",group=1)
+        column = word  + ~(kw("AS") +  word)
+        selectList = column  + ( kw(",") + column )[...]
+        selectStatement = kw("SELECT") + selectList + kw("FROM") + word
+        
+        ret = selectStatement.parse("select x,y,z,w from t",0)
+        self.assertEqual(Success(["select",["x",None,
+                                            [[",",["y",None]],
+                                             [",",["z",None]],
+                                             [",",["w",None]]]],
+                                  "from",
+                                  "t"],
+                                 21),
+                         ret)
+        
 if __name__ == "__main__":
     unittest.main()
 

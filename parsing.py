@@ -41,6 +41,9 @@ class Parser(abc.ABC):
     def __getitem__(self,key):
          return Many(self,key)
 
+    def __invert__(self):
+         return Option(self)
+
     
 @dataclass
 class Success:
@@ -164,7 +167,20 @@ class Many(Parser):
     def splicing(self,splicing=True):
         self._splicing = splicing
         return self
-        
+
+class Option(Parser):
+
+    def __init__(self,p):
+        self.p    = p
+
+    def parse(self,s,i):
+        match self.p.parse(s,i):
+            case Success(v,j):
+                return Success(self.func(v),j)
+            case _ as fail:
+                return Success(None,i)
+
+
 class Recursive(Parser):
 
     def __init__(self):
@@ -212,9 +228,7 @@ class Recursive(Parser):
     def do_left_recursion2(self,q):
 
         first,second = q.parsers
-        def func1(*args):
-            x,*rest = args
-            return [x,*rest]
+        def func1(*args): return [*args]
         term         = second
         expr,*rest   = first.parsers
 
@@ -258,14 +272,18 @@ class strP(Parser):
 
 class regexpP(Parser):
 
-    def __init__(self,str,*args,**kwargs):
-        self.re = re.compile(str,*args,**kwargs)
+    def __init__(self,str,group=0,**kwargs):
+        self.re = re.compile(str,**kwargs)
+        self.group = group
 
     def parse(self,s,i):
         if m := self.re.match(s,i):
-            str = m.group(0)
-            return Success(str,i+len(str))
+            str = m.group(self.group)
+            start,end = m.span()
+            return Success(str,end)
         else:
             return Failure(i)
 
+def lexme(p):
+    return (regexpP(r"\s+") + p)(1)
 
