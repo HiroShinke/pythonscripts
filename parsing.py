@@ -180,6 +180,10 @@ class Recursive(Parser):
              isinstance(q.parsers[0].p,Seq) and
              q.parsers[0].p.parsers[0] == self ):
             self.do_left_recursion(q)
+        elif ( isinstance(q,Or) and
+             isinstance(q.parsers[0],Seq) and
+             q.parsers[0].parsers[0] == self ):
+            self.do_left_recursion2(q)
         else:
             self.p = q
 
@@ -205,6 +209,29 @@ class Recursive(Parser):
                      Empty() >> constAction(lambda x: x) )
         self.p = term + expr2  << (lambda a,cont: cont(a))
 
+    def do_left_recursion2(self,q):
+
+        first,second = q.parsers
+        def func1(*args):
+            x,*rest = args
+            return [x,*rest]
+        term         = second
+        expr,*rest   = first.parsers
+
+        alpha = Seq(*rest)
+        expr2 = Recursive()
+
+        def helper(v):
+            *args,cont = v
+            def tmpfunc(x):
+                return cont(func1(x,*args))
+            return tmpfunc
+
+        expr2  <<= ( alpha + expr2 >> helper |
+                     Empty() >> constAction(lambda x: x) )
+        self.p = term + expr2  << (lambda a,cont: cont(a))
+
+        
 class Empty(Parser):
 
     def __init__(self,c=None):

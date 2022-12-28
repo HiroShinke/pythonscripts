@@ -427,6 +427,37 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(Success([["1","+","2"],"*",["3","+","4"]],11),ret)
 
 
+    def test_left_recursion4(self):
+
+        expr = Recursive()
+        term = Recursive()
+        
+        addOp = strP("+") |  strP("-")                   
+        mulOp = strP("*") |  strP("/") 
+
+        item = ( regexpP(r"\d+") | 
+                 (charP("(") + expr + charP(")"))(1) )
+
+        term <<= (term + mulOp + item |
+                  item
+                  )
+        expr <<= (expr + addOp + term |
+                  term
+                  )
+
+        ret = expr.parse("1+1*1+1",0)
+        self.assertEqual(Success([["1","+",["1","*","1"]],"+","1"],7),ret)
+
+        ret = expr.parse("1-1*1+1",0)
+        self.assertEqual(Success([["1","-",["1","*","1"]],"+","1"],7),ret)
+
+        ret = expr.parse("1-(1+1)+1",0)
+        self.assertEqual(Success([["1","-",["1","+","1"]],"+","1"],9),ret)
+
+        ret = expr.parse("(1+2)*(3+4)",0)
+        self.assertEqual(Success([["1","+","2"],"*",["3","+","4"]],11),ret)
+        
+
 if __name__ == "__main__":
     unittest.main()
 
