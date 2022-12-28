@@ -63,6 +63,13 @@ class Person2:
         self.age  = age
 
 Person3 = namedtuple("Person3",["name","age"])
+
+@dataclass
+class Person4:
+    name: str
+    age: int
+    def __post_init__(self):
+        self.secret = 1000
         
 p = Person("tom",10)
 q = Person2("john",20)
@@ -70,7 +77,7 @@ a = Person("alice",10)
 r = Person2("paul",40)
 s = Person2("geoge",40)
 t = Person3("bob",23)
-
+k = Person4("ken",23)
 
 def checkPerson(p):
     match p:
@@ -86,6 +93,8 @@ def checkPerson(p):
             print("found geoge")
         case Person3(name="bob"):
             print("found bob")
+        case Person4(name=k):
+            print(f"found {k}")
         case _:
              print("found nothing")
 
@@ -95,4 +104,4 @@ checkPerson(a)
 checkPerson(r)
 checkPerson(s)
 checkPerson(t)
-
+checkPerson(k)
