@@ -13,9 +13,17 @@ class Parser(abc.ABC):
     def parse(self,seq,i):
         pass
 
-    def __call__(self,keys):
-        def helper(v):
-            return v.__getitem__(keys)
+    def __call__(self,*args):
+
+        if len(args) == 0:
+            raise ValueError("args required in __call__")
+        elif len(args) == 1:
+            def helper(v):
+                return v[args[0]]
+        else:
+            def helper(v):
+                return [ v[i] for i in args ]
+
         return Action(self,helper)
 
     def __add__(self,b):
@@ -176,7 +184,7 @@ class Option(Parser):
     def parse(self,s,i):
         match self.p.parse(s,i):
             case Success(v,j):
-                return Success(self.func(v),j)
+                return Success(v,j)
             case _ as fail:
                 return Success(None,i)
 
@@ -258,7 +266,8 @@ class Empty(Parser):
 ################################################################################
 # special parser for string
 
-class strP(Parser):
+
+class StrP(Parser):
 
     def __init__(self,str):
         self.str = str
@@ -270,7 +279,7 @@ class strP(Parser):
         else:
             return Failure(i)
 
-class regexpP(Parser):
+class RegexpP(Parser):
 
     def __init__(self,str,group=0,**kwargs):
         self.re = re.compile(str,**kwargs)
@@ -286,4 +295,7 @@ class regexpP(Parser):
 
 def lexme(p):
     return (regexpP(r"\s+") + p)(1)
+
+def strP(str): return StrP(str)
+def regexpP(str,group=0,**kwargs): return RegexpP(str,group,**kwargs)
 
