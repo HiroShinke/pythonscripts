@@ -296,6 +296,6 @@ class RegexpP(Parser):
 def lexme(p):
     return (regexpP(r"\s+") + p)(1)
 
-def strP(str): return StrP(str)
-def regexpP(str,group=0,**kwargs): return RegexpP(str,group,**kwargs)
+def strp(str): return StrP(str)
+def regexpp(str,group=0,**kwargs): return RegexpP(str,group,**kwargs)
 

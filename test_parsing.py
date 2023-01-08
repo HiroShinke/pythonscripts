@@ -112,7 +112,7 @@ class TestParsing(unittest.TestCase):
 
     def test_strP1(self):
 
-        parser = strP("abc")
+        parser = strp("abc")
 
         ret = parser.parse("abc",0)
         self.assertEqual(Success("abc",3),ret)
@@ -123,7 +123,7 @@ class TestParsing(unittest.TestCase):
 
     def test_strP2(self):
 
-        parser = strP("abc") + strP("def")
+        parser = strp("abc") + strp("def")
 
         ret = parser.parse("abcdef",0)
         self.assertEqual(Success(["abc","def"],6),ret)
@@ -134,7 +134,7 @@ class TestParsing(unittest.TestCase):
 
     def test_regexpP1(self):
 
-        parser = regexpP("abc")
+        parser = regexpp("abc")
 
         ret = parser.parse("abc",0)
         self.assertEqual(Success("abc",3),ret)
@@ -145,7 +145,7 @@ class TestParsing(unittest.TestCase):
 
     def test_regexpP2(self):
 
-        parser = regexpP("abc") + regexpP("def")
+        parser = regexpp("abc") + regexpp("def")
 
         ret = parser.parse("abcdef",0)
         self.assertEqual(Success(["abc","def"],6),ret)
@@ -179,6 +179,9 @@ class TestParsing(unittest.TestCase):
 
         ret = expr.parse("1+1*1+1",0)
         self.assertEqual(Success(["1","+","1","*","1","+","1"],7),ret)
+
+        expr = Recursive()
+        term = Recursive()
 
         term <<= item + charP("*") + term | item
         expr <<= term + charP("+") + expr | term
@@ -221,10 +224,10 @@ class TestParsing(unittest.TestCase):
             return f(0,"+")
         
         item = charP("1")
-        term <<= ( (item + regexpP(r"[*/]") + term) >> applyOp |
+        term <<= ( (item + regexpp(r"[*/]") + term) >> applyOp |
                    item >> applyOp )
         term2 = term >> evalMult
-        expr <<= ( (term2 + regexpP(r"[\+\-]") + expr) >> applyOp  |
+        expr <<= ( (term2 + regexpp(r"[\+\-]") + expr) >> applyOp  |
                    term2 >> applyOp )
         expr2 = expr >> evalAdd
 
@@ -266,15 +269,15 @@ class TestParsing(unittest.TestCase):
         def evalMult(f): return f(1,"*")
         def evalAdd(f): return f(0,"+")
             
-        item = ( regexpP(r"\d+") | 
+        item = ( regexpp(r"\d+") | 
                  (charP("(") + expr2 + charP(")"))(1) )
 
-        term <<= ( (item + regexpP(r"[*/]") + term) >> applyOp |
+        term <<= ( (item + regexpp(r"[*/]") + term) >> applyOp |
                     item >> applyInit
                   )
         term2 = term >> evalMult
 
-        expr <<= ( (term2 + regexpP(r"[\+\-]") + expr) >> applyOp  |
+        expr <<= ( (term2 + regexpp(r"[\+\-]") + expr) >> applyOp  |
                     term2 >> applyInit
                   )
         expr2 <<= expr >> evalAdd
@@ -306,13 +309,13 @@ class TestParsing(unittest.TestCase):
         def evalMult(f): return f(1,operator.mul)
         def evalAdd(f): return f(0,operator.add)
 
-        addOp = ( strP("+") >> (lambda _: operator.add)| 
-                  strP("-") >> (lambda _: operator.sub) )
+        addOp = ( strp("+") >> (lambda _: operator.add)| 
+                  strp("-") >> (lambda _: operator.sub) )
 
-        mulOp = ( strP("*") >> (lambda _: operator.mul) | 
-                  strP("/") >> (lambda _: operator.truediv) )
+        mulOp = ( strp("*") >> (lambda _: operator.mul) | 
+                  strp("/") >> (lambda _: operator.truediv) )
         
-        item = ( regexpP(r"\d+") | 
+        item = ( regexpp(r"\d+") | 
                  (charP("(") + expr2 + charP(")"))(1) )
 
         term <<= ( (item + mulOp + term) >> applyOp |
@@ -341,13 +344,13 @@ class TestParsing(unittest.TestCase):
 
         expr = Recursive()
         
-        addOp = ( strP("+") >> (lambda _: operator.add)| 
-                  strP("-") >> (lambda _: operator.sub) )
+        addOp = ( strp("+") >> (lambda _: operator.add)| 
+                  strp("-") >> (lambda _: operator.sub) )
 
         def func1(x,op,t): return op(x,int(t))
         def func2(tstr): return int(tstr)
 
-        term = regexpP(r"\d+")
+        term = regexpp(r"\d+")
         expr <<= ((expr + addOp + term) >> func1 |
                   term >> func2
                   )
@@ -363,16 +366,16 @@ class TestParsing(unittest.TestCase):
         expr = Recursive()
         term = Recursive()
         
-        addOp = ( strP("+") >> constAction(operator.add)|
-                  strP("-") >> constAction(operator.sub) )
+        addOp = ( strp("+") >> constAction(operator.add)|
+                  strp("-") >> constAction(operator.sub) )
 
-        mulOp = ( strP("*") >> constAction(operator.mul) | 
-                  strP("/") >> constAction(operator.truediv) )
+        mulOp = ( strp("*") >> constAction(operator.mul) | 
+                  strp("/") >> constAction(operator.truediv) )
 
         def func1(x,op,t): return op(x,t)
         def func2(tstr): return int(tstr)
 
-        item = ( regexpP(r"\d+") >> func2 | 
+        item = ( regexpp(r"\d+") >> func2 | 
                  (charP("(") + expr + charP(")"))(1) )
 
         term <<= ((term + mulOp + item) >> func1 |
@@ -402,10 +405,10 @@ class TestParsing(unittest.TestCase):
         
         def func1(x,op,t): return [x,op,t]
 
-        addOp = strP("+") |  strP("-")                   
-        mulOp = strP("*") |  strP("/") 
+        addOp = strp("+") |  strp("-")                   
+        mulOp = strp("*") |  strp("/") 
 
-        item = ( regexpP(r"\d+") | 
+        item = ( regexpp(r"\d+") | 
                  (charP("(") + expr + charP(")"))(1) )
 
         term <<= ((term + mulOp + item) >> func1 |
@@ -433,10 +436,10 @@ class TestParsing(unittest.TestCase):
         expr = Recursive()
         term = Recursive()
         
-        addOp = strP("+") |  strP("-")                   
-        mulOp = strP("*") |  strP("/") 
+        addOp = strp("+") |  strp("-")                   
+        mulOp = strp("*") |  strp("/") 
 
-        item = ( regexpP(r"\d+") | 
+        item = ( regexpp(r"\d+") | 
                  (charP("(") + expr + charP(")"))(1) )
 
         term <<= (term + mulOp + item |
@@ -465,9 +468,9 @@ class TestParsing(unittest.TestCase):
         expr = Recursive()
         term = Recursive()
 
-        def kw(str): return regexpP(rf"\s*({str})",group=1,flags=re.I)
+        def kw(str): return regexpp(rf"\s*({str})",group=1,flags=re.I)
         
-        word = regexpP(r"\s*(\w+)",group=1)
+        word = regexpp(r"\s*(\w+)",group=1)
         column = word  + ~(kw("AS") +  word)
         selectList = column  + ( kw(",") + column )[...]
         selectStatement = kw("SELECT") + selectList + kw("FROM") + word
@@ -488,9 +491,9 @@ class TestParsing(unittest.TestCase):
         expr = Recursive()
         term = Recursive()
 
-        def kw(str): return regexpP(rf"\s*({str})",group=1,flags=re.I)
+        def kw(str): return regexpp(rf"\s*({str})",group=1,flags=re.I)
         
-        word = regexpP(r"\s*(\w+)",group=1)
+        word = regexpp(r"\s*(\w+)",group=1)
         column = (word  + ~(kw("AS") +  word)).splicing()
         selectList = column  + ( kw(",") + column )[...].splicing()
         selectStatement = kw("SELECT") + selectList + kw("FROM") + word
