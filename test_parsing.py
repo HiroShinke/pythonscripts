@@ -162,10 +162,10 @@ class TestParsing(unittest.TestCase):
         expr <<= (item + charP("+") + expr).splicing() | item
 
         ret = expr.parse("1+1+1",0)
-        self.assertEqual(Success(["1","+","1","+","1"],5),ret)
+        self.assertEqual(Success(["1","+","1","+","1"],5,True),ret)
 
         ret = expr.parse("1+1+1+1",0)
-        self.assertEqual(Success(["1","+","1","+","1","+","1"],7),ret)
+        self.assertEqual(Success(["1","+","1","+","1","+","1"],7,True),ret)
 
 
     def test_expr(self):
@@ -178,7 +178,7 @@ class TestParsing(unittest.TestCase):
         expr <<= (term + charP("+") + expr).splicing() | term
 
         ret = expr.parse("1+1*1+1",0)
-        self.assertEqual(Success(["1","+","1","*","1","+","1"],7),ret)
+        self.assertEqual(Success(["1","+","1","*","1","+","1"],7,True),ret)
 
         expr = Recursive()
         term = Recursive()
@@ -500,12 +500,103 @@ class TestParsing(unittest.TestCase):
         
         ret = selectStatement.parse("select x,y,z,w from t",0)
         self.assertEqual(Success(["select",["x",None,
-                                            [",",["y",None],
-                                             ",",["z",None],
-                                             ",",["w",None]]],
+                                            [",","y",None],
+                                            [",","z",None],
+                                            [",","w",None]],
                                   "from",
                                   "t"],
-                                  21),
+                                 21),
+                         ret)
+
+    def test_select_list_splicing2(self):
+
+        expr = Recursive()
+        term = Recursive()
+
+        def kw(str): return regexpp(rf"\s*({str})",group=1,flags=re.I)
+        
+        word = regexpp(r"\s*(\w+)",group=1)
+        column = (word  + ~(kw("AS") +  word)).splicing()
+        selectList = (column  + ( kw(",") + column )[...].splicing()).splicing()
+        selectStatement = kw("SELECT") + selectList + kw("FROM") + word
+        
+        ret = selectStatement.parse("select x,y,z,w from t",0)
+        self.assertEqual(Success(["select","x",None,
+                                  [",","y",None],
+                                  [",","z",None],
+                                  [",","w",None],
+                                  "from",
+                                  "t"],
+                                 21),
+                         ret)
+
+
+    def test_select_list_skip(self):
+
+        expr = Recursive()
+        term = Recursive()
+
+        def kw(str): return regexpp(rf"\s*({str})",group=1,flags=re.I)
+        
+        word = regexpp(r"\s*(\w+)",group=1)
+        column = (word  + ~(kw("AS") +  word)).splicing()
+        selectList = (column  + ( Skip(kw(",")) + column )[...].splicing()).splicing()
+        selectStatement = kw("SELECT") + selectList + kw("FROM") + word
+        
+        ret = selectStatement.parse("select x,y,z,w from t",0)
+        self.assertEqual(Success(["select","x",None,
+                                  ["y",None],
+                                  ["z",None],
+                                  ["w",None],
+                                  "from",
+                                  "t"],
+                                 21),
+                         ret)
+
+
+    def test_select_list_option_splicing(self):
+
+        expr = Recursive()
+        term = Recursive()
+
+        def kw(str): return regexpp(rf"\s*({str})",group=1,flags=re.I)
+        
+        word = regexpp(r"\s*(\w+)",group=1)
+        column = (word  + (~(kw("AS") +  word)).splicing()).splicing()
+        selectList = (column  + ( Skip(kw(",")) + column )[...].splicing()).splicing()
+        selectStatement = kw("SELECT") + selectList + kw("FROM") + word
+        
+        ret = selectStatement.parse("select x,y,z,w from t",0)
+        self.assertEqual(Success(["select","x",
+                                  ["y"],
+                                  ["z"],
+                                  ["w"],
+                                  "from",
+                                  "t"],
+                                 21),
+                         ret)
+
+
+    def test_select_list_full_splicing(self):
+
+        expr = Recursive()
+        term = Recursive()
+
+        def kw(str): return regexpp(rf"\s*({str})",group=1,flags=re.I)
+        
+        word = regexpp(r"\s*(\w+)",group=1)
+        column = (word  + (~(kw("AS") +  word)).splicing()).splicing()
+        selectList = (column  + ((Skip(kw(",")) + column )).splicing()[...].splicing()).splicing()
+        selectStatement = kw("SELECT") + selectList + kw("FROM") + word
+        
+        ret = selectStatement.parse("select x,y,z,w from t",0)
+        self.assertEqual(Success(["select","x",
+                                  "y",
+                                  "z",
+                                  "w",
+                                  "from",
+                                  "t"],
+                                 21),
                          ret)
         
 if __name__ == "__main__":

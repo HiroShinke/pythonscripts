@@ -56,11 +56,12 @@ class Parser(abc.ABC):
 @dataclass
 class Success:
     value : any
-    ind   : int
+    pos   : int
+    splicing : bool = False
 
 @dataclass
 class Failure:
-    ind   : int
+    pos   : int
 
 def constAction(c):
     return lambda _: c
@@ -84,16 +85,15 @@ class Seq(Parser):
         ret = []
         for p in self.parsers:
             match p.parse(s,i):
-                case Success(v,j):
-                    if (self._splicing and
-                        isinstance(v,list)):
+                case Success(v,j,splicing):
+                    if splicing:
                         ret.extend(v)
                     else:
                         ret.append(v)
                     i = j
                 case _ as fail:
                     return fail
-        return Success(ret,i)
+        return Success(ret,i,self._splicing)
 
     def splicing(self,splicing=True):
         self._splicing = splicing
@@ -108,8 +108,8 @@ class Or(Parser):
         maxi = i
         for p in self.parsers:
             match p.parse(s,i):
-                case Success(v,j):
-                    return Success(v,j)
+                case Success() as succ:
+                    return succ
                 case Failure(j):
                     if maxi < j:
                         maxi = j
@@ -123,8 +123,8 @@ class Action(Parser):
 
     def parse(self,s,i):
         match self.p.parse(s,i):
-            case Success(v,j):
-                return Success(self.func(v),j)
+            case Success(v,j,splicing):
+                return Success(self.func(v),j,splicing)
             case _ as fail:
                 return fail
 
@@ -153,22 +153,23 @@ class Many(Parser):
     def parse(self,s,i):
 
         ret = []
+        match_count = 0
         while True:
             match self.p.parse(s,i):
-                case Success(v,j):
-                    if (self._splicing and
-                        isinstance(v,list)):
+                case Success(v,j,splicing):
+                    if splicing:
                         ret.extend(v)
                     else:
                         ret.append(v)
                     i = j
-                    if self.max == len(ret):
+                    match_count += 1
+                    if self.max == match_count:
                         break
                 case _ as fail:
                     break
 
-        if self.min <= len(ret):
-            return Success(ret,i)
+        if self.min <= match_count:
+            return Success(ret,i,self._splicing)
         else:
             return Failure(i)
 
@@ -178,17 +179,36 @@ class Many(Parser):
 
 class Option(Parser):
 
+    def __init__(self,p,splicing=False):
+        self.p    = p
+        self._splicing = splicing
+
+    def parse(self,s,i):
+        match self.p.parse(s,i):
+            case Success() as succ:
+                return succ
+            case _ as fail:
+                if self._splicing:
+                    return Success([],i,True)
+                else:
+                    return Success(None,i)
+
+    def splicing(self,splicing=True):
+        self._splicing = splicing
+        return self
+                
+class Skip(Parser):
+
     def __init__(self,p):
         self.p    = p
 
     def parse(self,s,i):
         match self.p.parse(s,i):
-            case Success(v,j):
-                return Success(v,j)
+            case Success(_,j):
+                return Success([],j,True)
             case _ as fail:
-                return Success(None,i)
-
-
+                return fail
+                
 class Recursive(Parser):
 
     def __init__(self):
