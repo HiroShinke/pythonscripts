@@ -58,6 +58,14 @@ class Parser(abc.ABC):
     def iter(self):
         return iter([])
 
+    def rec_set_splicing(self,splicing=True):
+        
+        if hasattr(self,"splicing"):
+            self.splicing(splicing)
+
+        for c in self.iter():
+            c.rec_set_splicing(splicing)
+    
 @dataclass
 class Success:
     value : any
@@ -147,11 +155,12 @@ class Many(Parser):
     def __init__(self,p,key,splicing=False):
         self.p    = p
         self._splicing = splicing
+        ellipsis = type(...)
         match key:
             case int(n):
                 self.min = n
                 self.max = n
-            case n if isinstance(n,type(...)):
+            case ellipsis():
                 self.min = 0
                 self.max = None
             case (int(n),int(m)):

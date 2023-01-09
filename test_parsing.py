@@ -611,18 +611,8 @@ class TestParsing(unittest.TestCase):
         column = word  + ~(kw("AS") +  word)
         selectList = column  + (-kw(",") + column )[...]
         selectStatement = kw("SELECT") + selectList + kw("FROM") + word
+        selectStatement.rec_set_splicing()
 
-
-        def rec_set_splicing(p):
-
-            if hasattr(p,"splicing"):
-                p.splicing()
-
-            for c in p.iter():
-                rec_set_splicing(c)
-
-        rec_set_splicing(selectStatement)
-                
         ret = selectStatement.parse("select x,y,z,w from t",0)
         self.assertEqual(Success(["select","x",
                                   "y",
