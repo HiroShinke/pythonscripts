@@ -633,7 +633,7 @@ class TestParsing(unittest.TestCase):
         def kw(str): return regexpp(rf"\s*({str})",group=1,flags=re.I)
         
         word = regexpp(r"\s*(\w+)",group=1)
-        column = word  + ~(-kw("AS") +  word) >> Configure(defined=True)
+        column = word  + ~(-kw("AS") +  word) >> Defined()
         selectList = column  + (-kw(",") + column )[...]
         selectStatement = kw("SELECT") + selectList + kw("FROM") + word
         selectStatement.rec_set_splicing()

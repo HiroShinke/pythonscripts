@@ -40,9 +40,8 @@ class Parser(abc.ABC):
             return Or(self,b)
         
     def __rshift__(self,b):
-        if isinstance(b,Configure):
-            if m := b.kwargs.get("defined",None):
-                self.defined(m)
+        if isinstance(b,Configurator):
+            b.configure(self)
             return self
         else:
             return Action(self,b)
@@ -71,6 +70,14 @@ class Parser(abc.ABC):
 
         for c in self.iter():
             c.rec_set_splicing(splicing)
+
+
+class Configurator(abc.ABC):
+    @abc.abstractmethod
+    def configure(self,parser:Parser) -> None:
+        pass
+    
+            
     
 @dataclass
 class Success:
@@ -334,10 +341,25 @@ class Empty(Parser):
     def parse(self,s,i):
         return Success(self.c,i)
 
-class Configure:
-    def __init__(self,**kwargs):
-        self.kwargs = kwargs
+################################################################################
+#     Configurator
+################################################################################
 
+class Defined(Configurator):
+
+    def __init__(self,defined=True):
+        self.defined = defined
+
+    def configure(self,parser):
+        parser.defined(self.defined)
+
+class Splicing(Configurator):
+
+    def __init__(self,splicing=True):
+        self.splicing = splicing
+
+    def configure(self,parser):
+        parser.splicing(self.defined)
     
 
 ################################################################################
