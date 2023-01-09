@@ -2,6 +2,7 @@
 
 import re
 import abc
+import types
 from dataclasses import dataclass
 
 SUCCESS = True
@@ -27,19 +28,24 @@ class Parser(abc.ABC):
         return Action(self,helper)
 
     def __add__(self,b):
-        if isinstance(self,Seq):
+        if isinstance(self,Seq) and not self._defined:
             return Seq(*self.parsers,b)
         else:
             return Seq(self,b)
 
     def __or__(self,b):
-        if isinstance(self,Or):
+        if isinstance(self,Or) and not self._defined:
             return Or(*self.parsers,b)
         else:
             return Or(self,b)
         
-    def __rshift__(self,func):
-        return Action(self,func)
+    def __rshift__(self,b):
+        if isinstance(b,Configure):
+            if m := b.kwargs.get("defined",None):
+                self.defined(m)
+            return self
+        else:
+            return Action(self,b)
 
     def __lshift__(self,func):
         def helper(v):
@@ -93,6 +99,7 @@ class Seq(Parser):
     def __init__(self,*parsers,splicing=False):
         self.parsers = [ p for p in parsers]
         self._splicing = splicing
+        self._defined = False
 
     def parse(self,s,i):
         ret = []
@@ -112,6 +119,10 @@ class Seq(Parser):
         self._splicing = splicing
         return self
 
+    def defined(self,defined=True):
+        self._defined = defined
+        return self
+    
     def iter(self):
         return iter(self.parsers)
     
@@ -119,7 +130,8 @@ class Or(Parser):
 
     def __init__(self,*parsers):
         self.parsers = [ p for p in parsers]
-
+        self._defined = False
+        
     def parse(self,s,i):
         maxi = i
         for p in self.parsers:
@@ -130,6 +142,10 @@ class Or(Parser):
                     if maxi < j:
                         maxi = j
         return Failure(maxi)
+
+    def defined(self,defined=True):
+        self._defined = defined
+        return self
 
     def iter(self):
         return iter(self.parsers)
@@ -318,6 +334,11 @@ class Empty(Parser):
     def parse(self,s,i):
         return Success(self.c,i)
 
+class Configure:
+    def __init__(self,**kwargs):
+        self.kwargs = kwargs
+
+    
 
 ################################################################################
 # special parser for string

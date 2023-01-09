@@ -623,6 +623,33 @@ class TestParsing(unittest.TestCase):
                                  21,
                                  True),
                          ret)
+
+
+    def test_select_list_full_splicing3(self):
+
+        expr = Recursive()
+        term = Recursive()
+
+        def kw(str): return regexpp(rf"\s*({str})",group=1,flags=re.I)
+        
+        word = regexpp(r"\s*(\w+)",group=1)
+        column = word  + ~(-kw("AS") +  word) >> Configure(defined=True)
+        selectList = column  + (-kw(",") + column )[...]
+        selectStatement = kw("SELECT") + selectList + kw("FROM") + word
+        selectStatement.rec_set_splicing()
+        column.splicing(False)
+
+        ret = selectStatement.parse("select x as a,y as b,z as c,w as d from t",0)
+        self.assertEqual(Success(["select",
+                                  ["x","a"],
+                                  ["y","b"],
+                                  ["z","c"],
+                                  ["w","d"],
+                                  "from",
+                                  "t"],
+                                 41,
+                                 True),
+                         ret)
         
 if __name__ == "__main__":
     unittest.main()
