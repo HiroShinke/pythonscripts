@@ -540,7 +540,7 @@ class TestParsing(unittest.TestCase):
         
         word = regexpp(r"\s*(\w+)",group=1)
         column = (word  + ~(kw("AS") +  word)).splicing()
-        selectList = (column  + ( Skip(kw(",")) + column )[...].splicing()).splicing()
+        selectList = (column  + ( -kw(",") + column )[...].splicing()).splicing()
         selectStatement = kw("SELECT") + selectList + kw("FROM") + word
         
         ret = selectStatement.parse("select x,y,z,w from t",0)
@@ -563,7 +563,7 @@ class TestParsing(unittest.TestCase):
         
         word = regexpp(r"\s*(\w+)",group=1)
         column = (word  + (~(kw("AS") +  word)).splicing()).splicing()
-        selectList = (column  + ( Skip(kw(",")) + column )[...].splicing()).splicing()
+        selectList = (column  + ( -kw(",") + column )[...].splicing()).splicing()
         selectStatement = kw("SELECT") + selectList + kw("FROM") + word
         
         ret = selectStatement.parse("select x,y,z,w from t",0)
@@ -586,7 +586,7 @@ class TestParsing(unittest.TestCase):
         
         word = regexpp(r"\s*(\w+)",group=1)
         column = (word  + (~(kw("AS") +  word)).splicing()).splicing()
-        selectList = (column  + ((Skip(kw(",")) + column )).splicing()[...].splicing()).splicing()
+        selectList = (column  + ((-kw(",") + column )).splicing()[...].splicing()).splicing()
         selectStatement = kw("SELECT") + selectList + kw("FROM") + word
         
         ret = selectStatement.parse("select x,y,z,w from t",0)
@@ -609,7 +609,7 @@ class TestParsing(unittest.TestCase):
         
         word = regexpp(r"\s*(\w+)",group=1)
         column = word  + ~(kw("AS") +  word)
-        selectList = column  + (Skip(kw(",")) + column )[...]
+        selectList = column  + (-kw(",") + column )[...]
         selectStatement = kw("SELECT") + selectList + kw("FROM") + word
 
 

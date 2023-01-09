@@ -52,6 +52,9 @@ class Parser(abc.ABC):
     def __invert__(self):
          return Option(self)
 
+    def __neg__(self):
+        return Skip(self)
+
     def iter(self):
         return iter([])
 
@@ -332,7 +335,7 @@ class RegexpP(Parser):
     def parse(self,s,i):
         if m := self.re.match(s,i):
             str = m.group(self.group)
-            start,end = m.span()
+            start,end = m.span(self.group)
             return Success(str,end)
         else:
             return Failure(i)
