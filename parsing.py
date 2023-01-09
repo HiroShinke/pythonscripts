@@ -13,6 +13,9 @@ class Parser(abc.ABC):
     def parse(self,seq,i):
         pass
 
+    def iter(self):
+        return iter([])
+    
     def __call__(self,*args):
 
         if len(args) == 0:
@@ -98,6 +101,9 @@ class Seq(Parser):
     def splicing(self,splicing=True):
         self._splicing = splicing
         return self
+
+    def iter(self):
+        return iter(self.parsers)
     
 class Or(Parser):
 
@@ -115,6 +121,9 @@ class Or(Parser):
                         maxi = j
         return Failure(maxi)
 
+    def iter(self):
+        return iter(self.parsers)
+    
 class Action(Parser):
 
     def __init__(self,p,func):
@@ -127,6 +136,9 @@ class Action(Parser):
                 return Success(self.func(v),j,splicing)
             case _ as fail:
                 return fail
+
+    def iter(self):
+        return iterm([self.p])
 
 class Many(Parser):
 
@@ -177,6 +189,10 @@ class Many(Parser):
         self._splicing = splicing
         return self
 
+    def iter(self):
+        return iterm([self.p])
+
+
 class Option(Parser):
 
     def __init__(self,p,splicing=False):
@@ -196,7 +212,10 @@ class Option(Parser):
     def splicing(self,splicing=True):
         self._splicing = splicing
         return self
-                
+
+    def iter(self):
+        return iterm([self.p])
+
 class Skip(Parser):
 
     def __init__(self,p):
@@ -208,6 +227,10 @@ class Skip(Parser):
                 return Success([],j,True)
             case _ as fail:
                 return fail
+
+    def iter(self):
+        return iterm([self.p])
+            
                 
 class Recursive(Parser):
 
@@ -273,6 +296,8 @@ class Recursive(Parser):
                      Empty() >> constAction(lambda x: x) )
         self.p = term + expr2  << (lambda a,cont: cont(a))
 
+    def iter(self):
+        return iterm([self.p])
         
 class Empty(Parser):
 
