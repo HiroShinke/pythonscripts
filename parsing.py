@@ -13,9 +13,6 @@ class Parser(abc.ABC):
     def parse(self,seq,i):
         pass
 
-    def iter(self):
-        return iter([])
-    
     def __call__(self,*args):
 
         if len(args) == 0:
@@ -55,7 +52,9 @@ class Parser(abc.ABC):
     def __invert__(self):
          return Option(self)
 
-    
+    def iter(self):
+        return iter([])
+
 @dataclass
 class Success:
     value : any
@@ -138,7 +137,7 @@ class Action(Parser):
                 return fail
 
     def iter(self):
-        return iterm([self.p])
+        return iter([self.p])
 
 class Many(Parser):
 
@@ -190,7 +189,7 @@ class Many(Parser):
         return self
 
     def iter(self):
-        return iterm([self.p])
+        return iter([self.p])
 
 
 class Option(Parser):
@@ -214,7 +213,7 @@ class Option(Parser):
         return self
 
     def iter(self):
-        return iterm([self.p])
+        return iter([self.p])
 
 class Skip(Parser):
 
@@ -229,7 +228,7 @@ class Skip(Parser):
                 return fail
 
     def iter(self):
-        return iterm([self.p])
+        return iter([self.p])
             
                 
 class Recursive(Parser):
@@ -297,7 +296,7 @@ class Recursive(Parser):
         self.p = term + expr2  << (lambda a,cont: cont(a))
 
     def iter(self):
-        return iterm([self.p])
+        return iter([self.p])
         
 class Empty(Parser):
 
