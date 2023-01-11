@@ -651,6 +651,61 @@ class TestParsing(unittest.TestCase):
                                  True),
                          ret)
         
+
+    def test_select_statment(self):
+
+        expr = Recursive()
+        term = Recursive()
+        exprList = Recursive()
+        table = Recursive()
+        
+        def kw(str): return regexpp(rf"\s*({str})",group=1,flags=re.I)
+
+        ident = regexpp(r"\s*(\w+)",group=1)
+        callargs = kw(r"\(") + exprList + kw(r"\)") 
+        funcall  = ident + ~callargs >> Defined()
+        column = expr + ~(-kw("AS") +  ident) >> Defined()
+        selectList = column  + (-kw(",") + column )[...]
+        selectStatement = kw("SELECT") + selectList + kw("FROM") + table
+        term <<= funcall + kw(r"\*") + term | funcall
+        expr <<= term + kw(r"\+") + expr | term
+
+        exprList <<= expr  + (-kw(",") + expr )[...] | Empty()
+        table <<= ( ident + ~(kw("AS") + ident) |
+                    kw(r"\(") + selectStatement + kw(r"\)") )
+
+        selectStatement.rec_set_splicing()
+        column.splicing(False)
+        selectStatement.splicing(False)
+        
+        ret = selectStatement.parse("select x as a,y as b,z as c,w as d from t",0)
+        self.assertEqual(Success(["select",
+                                  ["x","a"],
+                                  ["y","b"],
+                                  ["z","c"],
+                                  ["w","d"],
+                                  "from",
+                                  "t"],
+                                 41,
+                                 False),
+                         ret)
+
+        print(f"ret = {ret}")
+        
+        ret = selectStatement.parse("select f(x) as a,g(y+1) as b, 1 + 2 as c,w as d from t",0)
+        print(f"ret = {ret}")
+
+        ret = selectStatement.parse("select f(g(x),1+h(10)) from t",0)
+        print(f"ret = {ret}")
+
+        ret = selectStatement.parse("select a from (select b from t)",0)
+        print(f"ret = {ret}")
+
+        
+        
+
+
+
 if __name__ == "__main__":
     unittest.main()
 
