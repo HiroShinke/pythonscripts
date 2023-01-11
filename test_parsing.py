@@ -658,6 +658,7 @@ class TestParsing(unittest.TestCase):
         term = Recursive()
         exprList = Recursive()
         table = Recursive()
+        tableList = Recursive()
         
         def kw(str): return token(str,flags=re.I)
 
@@ -666,13 +667,13 @@ class TestParsing(unittest.TestCase):
         funcall  = ident + ~callargs >> Defined()
         column = expr + ~(-kw("AS") +  ident) >> Defined()
         selectList = column  + (-kw(",") + column )[...]
-        selectStatement = kw("SELECT") + selectList + kw("FROM") + table
+        selectStatement = kw("SELECT") + selectList + kw("FROM") + tableList
         term <<= funcall + kw(r"\*") + term | funcall
         expr <<= term + kw(r"\+") + expr | term
 
-        exprList <<= expr  + (-kw(",") + expr )[...] | Empty()
-        table <<= ( ident + ~(kw("AS") + ident) |
-                    kw(r"\(") + selectStatement + kw(r"\)") )
+        exprList <<= expr + (-kw(",") + expr )[...] | Empty()
+        table <<= ( ident | kw(r"\(") + selectStatement + kw(r"\)") )  + ~(kw("AS") + ident)
+        tableList <<= table + (-kw(",") + table )[...] | Empty()
 
         selectStatement.rec_set_splicing()
         column.splicing(False)
@@ -685,26 +686,45 @@ class TestParsing(unittest.TestCase):
                                   ["z","c"],
                                   ["w","d"],
                                   "from",
-                                  "t"],
+                                  ["t"]],
                                  41,
                                  False),
                          ret)
 
-        print(f"ret = {ret}")
-        
         ret = selectStatement.parse("select f(x) as a,g(y+1) as b, 1 + 2 as c,w as d from t",0)
-        print(f"ret = {ret}")
+        self.assertEqual(Success(['select',
+                                  ['f', '(', 'x', ')', 'a'],
+                                  ['g', '(', 'y', '+', '1', ')', 'b'],
+                                  ['1', '+', '2', 'c'],
+                                  ['w', 'd'],
+                                  'from',
+                                  ['t']],
+                                 54,
+                                 False),
+                         ret)
+                         
 
         ret = selectStatement.parse("select f(g(x),1+h(10)) from t",0)
-        print(f"ret = {ret}")
-
+        self.assertEqual(Success(['select',
+                                  ['f', '(',
+                                   'g', '(', 'x', ')',
+                                   '1', '+', 'h','(', '10', ')',
+                                   ')'], 'from', ['t']],
+                                 29,
+                                 False),
+                         ret)
+                                  
         ret = selectStatement.parse("select a from (select b from t)",0)
-        print(f"ret = {ret}")
-
-        
-        
-
-
+        self.assertEqual(Success(['select', ['a'],
+                                  'from', ['(',
+                                           ['select',
+                                            ['b'], 'from', ['t']], ')'
+                                           ]
+                                  ],
+                                 31,
+                                 False),
+                         ret)
+                          
 
 if __name__ == "__main__":
     unittest.main()
