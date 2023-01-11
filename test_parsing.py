@@ -659,7 +659,7 @@ class TestParsing(unittest.TestCase):
         exprList = Recursive()
         table = Recursive()
         
-        def kw(str): return regexpp(rf"\s*({str})",group=1,flags=re.I)
+        def kw(str): return token(str,flags=re.I)
 
         ident = regexpp(r"\s*(\w+)",group=1)
         callargs = kw(r"\(") + exprList + kw(r"\)") 

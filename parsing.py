@@ -407,5 +407,9 @@ def lexme(p):
     return (regexpp(r"\s+") + p)(1)
 
 def strp(str): return StrP(str)
-def regexpp(str,group=0,**kwargs): return RegexpP(str,group,**kwargs)
 
+def regexpp(str,group=0,**kwargs):
+    return RegexpP(str,group,**kwargs)
+
+def token(str,flags=None):
+    return regexpp(rf"\s*({str})",group=1,flags=flags)
