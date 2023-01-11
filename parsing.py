@@ -60,16 +60,24 @@ class Parser(abc.ABC):
     def __neg__(self):
         return Skip(self)
 
-    def iter(self):
+    def __iter__(self):
         return iter([])
 
     def rec_set_splicing(self,splicing=True):
-        
-        if hasattr(self,"splicing"):
-            self.splicing(splicing)
 
-        for c in self.iter():
-            c.rec_set_splicing(splicing)
+        check = set()
+
+        def helper(p):
+            if p in check:
+                return
+            else:
+                if hasattr(p,"splicing"):
+                    p.splicing(splicing)
+                check.add(p)
+            for c in p:
+                helper(c)
+                        
+        helper(self)
 
 
 class Configurator(abc.ABC):
@@ -130,7 +138,7 @@ class Seq(Parser):
         self._defined = defined
         return self
     
-    def iter(self):
+    def __iter__(self):
         return iter(self.parsers)
     
 class Or(Parser):
@@ -154,7 +162,7 @@ class Or(Parser):
         self._defined = defined
         return self
 
-    def iter(self):
+    def __iter__(self):
         return iter(self.parsers)
     
 class Action(Parser):
@@ -170,7 +178,7 @@ class Action(Parser):
             case _ as fail:
                 return fail
 
-    def iter(self):
+    def __iter__(self):
         return iter([self.p])
 
 class Many(Parser):
@@ -223,7 +231,7 @@ class Many(Parser):
         self._splicing = splicing
         return self
 
-    def iter(self):
+    def __iter__(self):
         return iter([self.p])
 
 
@@ -247,7 +255,7 @@ class Option(Parser):
         self._splicing = splicing
         return self
 
-    def iter(self):
+    def __iter__(self):
         return iter([self.p])
 
 class Skip(Parser):
@@ -262,7 +270,7 @@ class Skip(Parser):
             case _ as fail:
                 return fail
 
-    def iter(self):
+    def __iter__(self):
         return iter([self.p])
             
                 
@@ -279,11 +287,11 @@ class Recursive(Parser):
         if ( isinstance(q,Or) and
              isinstance(q.parsers[0],Action) and
              isinstance(q.parsers[0].p,Seq) and
-             q.parsers[0].p.parsers[0] == self ):
+             q.parsers[0].p.parsers[0] is self ):
             self.do_left_recursion(q)
         elif ( isinstance(q,Or) and
              isinstance(q.parsers[0],Seq) and
-             q.parsers[0].parsers[0] == self ):
+             q.parsers[0].parsers[0] is  self ):
             self.do_left_recursion2(q)
         else:
             self.p = q
@@ -330,8 +338,11 @@ class Recursive(Parser):
                      Empty() >> constAction(lambda x: x) )
         self.p = term + expr2  << (lambda a,cont: cont(a))
 
-    def iter(self):
-        return iter([self.p])
+    def __iter__(self):
+        if self.p:
+            return iter(self.p)
+        else:
+            return iter([])
         
 class Empty(Parser):
 
@@ -393,7 +404,7 @@ class RegexpP(Parser):
             return Failure(i)
 
 def lexme(p):
-    return (regexpP(r"\s+") + p)(1)
+    return (regexpp(r"\s+") + p)(1)
 
 def strp(str): return StrP(str)
 def regexpp(str,group=0,**kwargs): return RegexpP(str,group,**kwargs)
