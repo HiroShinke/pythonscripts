@@ -41,8 +41,7 @@ class Parser(abc.ABC):
         
     def __rshift__(self,b):
         if isinstance(b,Configurator):
-            b.configure(self)
-            return self
+            return b.configure(self)
         else:
             return Action(self,b)
 
@@ -62,6 +61,11 @@ class Parser(abc.ABC):
 
     def __iter__(self):
         return iter([])
+
+    def splicing(self,splicing=True):
+        for p in self:
+            if hasattr(p,"splicing"):
+                p.splicing(splicing)
 
     def rec_set_splicing(self,splicing=True):
 
@@ -363,6 +367,7 @@ class Defined(Configurator):
 
     def configure(self,parser):
         parser.defined(self.defined)
+        return parser
 
 class Splicing(Configurator):
 
@@ -371,6 +376,17 @@ class Splicing(Configurator):
 
     def configure(self,parser):
         parser.splicing(self.defined)
+        return parser
+
+class Tag(Configurator):
+
+    def __init__(self,name):
+        self.name = name
+
+    def configure(self,parser):
+        def helper(v):
+            return [self.name,v]
+        return (parser >> helper)
     
 
 ################################################################################
@@ -411,5 +427,5 @@ def strp(str): return StrP(str)
 def regexpp(str,group=0,**kwargs):
     return RegexpP(str,group,**kwargs)
 
-def token(str,flags=None):
+def token(str,flags=0):
     return regexpp(rf"\s*({str})",group=1,flags=flags)
