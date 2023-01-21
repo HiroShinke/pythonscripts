@@ -168,6 +168,18 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(Success(["1","+","1","+","1","+","1"],7,True),ret)
 
 
+    def test_tag(self):
+
+        parser = regexpp("abc") >> Tag("abc")
+
+        ret = parser.parse("abc",0)
+        self.assertEqual(Success(["abc","abc"],3),ret)
+
+        ret = parser.parse("abe",0)
+        self.assertEqual(Failure(0),ret)
+
+
+        
     def test_expr(self):
 
         expr = Recursive()
