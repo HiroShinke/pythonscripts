@@ -26,7 +26,32 @@ class A:
     a = Desc(10)
     b = Desc(20)
     c = Desc(30)
-    
+
+class StaticMethod:
+
+    def __init__(self,f):
+        self.f = f
+
+    def __get__(self,obj,objtype=None):
+        return self.f
+
+class ClassMethod:
+
+    def __init__(self,f):
+        self.f = f
+
+    def __get__(self,obj,klass=None):
+
+        if klass is None:
+            klass = type(obj)
+
+        def func(*args):
+            return self.f(klass,*args)
+        return func
+
+def justfunc(*args):
+    return args
+
 class DescTest(unittest.TestCase):
 
     def test_set(self):
@@ -77,13 +102,82 @@ class DescTest(unittest.TestCase):
         self.assertEqual(10,A.a)
         self.assertEqual(20,A.b)
         self.assertEqual(30,A.c)
+
+    def test_basic3(self):
+
+        x = A()
+
+        self.assertEqual(True,hasattr(x,"a"))
+        self.assertEqual(True,hasattr(A,"a"))
+        self.assertEqual(Desc,type(A.__dict__["a"]))
+        self.assertEqual(Desc,type(object.__getattribute__(A,"a")))
+        self.assertEqual(Desc,type(A.__getattribute__(A,"a")))        
+        self.assertEqual(int,type(getattr(A,"a")))
+
+        self.assertEqual(False,"a" in x.__dict__)
+        self.assertEqual(None,object.__getattribute__(x,"a"))
+        self.assertEqual(None,getattr(x,"a"))
+
+    def test_simplemethod(self):
+
+        class B:
+            f = justfunc
+            def g(*args):
+                return args
+
+        b = B()
+        self.assertEqual((b,1,2),b.f(1,2))
+        self.assertEqual((1,2),B.f(1,2))
+
+        self.assertEqual((b,1,2),b.g(1,2))
+        self.assertEqual((1,2),B.g(1,2))
+
+        self.assertEqual(True,hasattr(justfunc,"__get__"))
         
+        
+    def test_classmethod(self):
 
+        class B:
+            f = classmethod(justfunc)
 
+            @classmethod
+            def g(*args):
+                return args
 
+            h = ClassMethod(justfunc)
 
+        b = B()
+        self.assertEqual((B,1,2),b.f(1,2))
+        self.assertEqual((B,1,2),B.f(1,2))
 
+        self.assertEqual((B,1,2),b.g(1,2))
+        self.assertEqual((B,1,2),B.g(1,2))
 
+        self.assertEqual((B,1,2),b.h(1,2))
+        self.assertEqual((B,1,2),B.h(1,2))
+        
+    def test_staticmethod(self):
+
+        class B:
+            f = staticmethod(justfunc)
+
+            @staticmethod
+            def g(*args):
+                return args
+
+            h = StaticMethod(justfunc)            
+        
+        b = B()
+        self.assertEqual((1,2),b.f(1,2))
+        self.assertEqual((1,2),B.f(1,2))
+
+        self.assertEqual((1,2),b.g(1,2))
+        self.assertEqual((1,2),B.g(1,2))
+
+        self.assertEqual((1,2),b.h(1,2))
+        self.assertEqual((1,2),B.h(1,2))
+
+        
 if __name__ == "__main__":
     unittest.main()
 
