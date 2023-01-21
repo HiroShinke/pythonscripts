@@ -26,7 +26,7 @@ def build_parser():
 
     ident = tk(r"\w+")
     callargs = tk(r"\(") + exprList + tk(r"\)") >> Defined()
-    funcall  = ident + ~callargs >> Defined()
+    funcall  = (ident >> Tag("var")) + ~callargs >> Defined()
 
     term <<= funcall + mulOp + term | funcall
     expr <<= term + addOp  + expr | term
@@ -34,7 +34,8 @@ def build_parser():
     
     column = expr + ~(-kw("AS") +  ident) >> Defined()
     selectList = column  + (-kw(",") + column )[...]
-    table <<= ( ident | kw(r"\(") + selectStatement + kw(r"\)") )  + ~(kw("AS") + ident)
+    table <<= ((ident >> Tag("table")
+               | kw(r"\(") + selectStatement + kw(r"\)") )  + ~(kw("AS") + ident))
     tableList <<= table + (-kw(",") + table )[...] | Empty()
 
     binExpr   = funcall + binOp + funcall >> Defined()
@@ -46,8 +47,10 @@ def build_parser():
                         ~whereClause )
     
     selectStatement.rec_set_splicing()
+    binExpr.splicing(False)
     column.splicing(False)
     selectStatement.splicing(False)
+    logTerm.splicing(False)
 
     return selectStatement
 
@@ -64,6 +67,11 @@ def main():
     print(ret)
     ret = parser.parse("select x,y from t where x = 1 and y = 1",0)
     print(ret)
+    ret = parser.parse("select x as a ,y as b  from t where x = 1 and y = 1",0)
+    print(ret)
+    ret = parser.parse("select x as a ,f(x) as b  from t where x = 1 and y = 1",0)
+    print(ret)
+
     
 if __name__ == "__main__":
     main()
