@@ -118,6 +118,23 @@ class DescTest(unittest.TestCase):
         self.assertEqual(None,object.__getattribute__(x,"a"))
         self.assertEqual(None,getattr(x,"a"))
 
+
+    def test_attr(self):
+
+        class C:
+            def __init__(self):
+                self.a = 1
+
+            def __getattr__(self,name):
+                return f"value of {name}"
+            
+        c = C()
+
+        self.assertEqual(1,c.a)
+        self.assertEqual("value of b",c.b)
+        self.assertEqual("value of b",getattr(c,"b"))
+
+        
     def test_simplemethod(self):
 
         class B:
