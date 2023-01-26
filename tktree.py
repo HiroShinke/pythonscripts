@@ -54,6 +54,7 @@ def main():
     button2 = ttk.Button(root,text="Quit",command=root.destroy)
     button2.grid(row=1,column=1,sticky=tk.W+tk.E)
     root.columnconfigure(0,weight=1)
+    root.columnconfigure(1,weight=1)    
     root.rowconfigure(0,weight=1)
     
     treeview.tree.bind("<Double-1>",event_printer)
