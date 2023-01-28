@@ -11,9 +11,15 @@ from dataclasses import dataclass
 
 @dataclass
 class PerformItem:
-    performName : str
+    name : str
     start : int | None
     end   : int | None
+
+@dataclass
+class CallItem:
+    name : str
+    start : int
+    end   : int
 
 class TreeView(tk.Frame):
 
@@ -122,8 +128,11 @@ def cobol_src_analyze(contents):
                                                     pos + start,
                                                     pos + end))
             elif tokentype == "call":
-                pass
-
+                register_multivalue(perform_dict,
+                                    currentSec,
+                                    CallItem(word,
+                                             pos + start,
+                                             pos + end))
         pos += len(l) + 1
 
     # print(f"{perform_dict}")
@@ -131,7 +140,7 @@ def cobol_src_analyze(contents):
     def recursivePrintSec(p,lev):
         print(" " * lev, p)
         for c in perform_dict.get(p,[]):
-            recursivePrintSec(c.performName,lev+1)
+            recursivePrintSec(c.name,lev+1)
 
     recursivePrintSec(entrySec,0)
 
@@ -199,9 +208,18 @@ def main():
     calldict = {}
     
     def tree_insert_item2(p,parent):
-        node = treeview2.tree.insert(parent,tk.END,text=p.performName,open=False)
+
+        match p:
+            case PerformItem():
+                tag = "perform"
+            case CallItem():
+                tag = "call"
+            case _:
+                tag = None
+                
+        node = treeview2.tree.insert(parent,tk.END,text=p.name,open=False,tag=tag)
         all_nodes2[node] = p            
-        if p.performName in calldict:
+        if p.name in calldict:
             dummy_nodes2[node] = p            
             treeview2.tree.insert(node,tk.END)
 
@@ -211,7 +229,7 @@ def main():
         if p:
             children = treeview2.tree.get_children(item)
             treeview2.tree.delete(children)
-            for c in calldict[p.performName]:
+            for c in calldict[p.name]:
                 tree_insert_item2(c,item)
 
     def tree_select_item(e):
@@ -242,6 +260,9 @@ def main():
             calldict.update(retdict)
             if items := treeview2.tree.get_children():
                 treeview2.tree.delete(items)
+    
+            treeview2.tree.tag_configure("perform",foreground="violet")
+            treeview2.tree.tag_configure("call",foreground="orange")
             tree_insert_item2(PerformItem(entrySec,None,None),"")
 
     def tree_select_item2(e):
@@ -250,6 +271,10 @@ def main():
         print(f"p = {p}")
         match p:
             case PerformItem(name,s,e) if s is not None:
+                srcview.text.tag_remove("sel","1.0","end")
+                srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
+                srcview.text.see(f"1.0 +{s}c")
+            case CallItem(name,s,e) if s is not None:
                 srcview.text.tag_remove("sel","1.0","end")
                 srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
                 srcview.text.see(f"1.0 +{s}c")
