@@ -2,6 +2,7 @@
 
 import tkinter as tk
 import tkinter.ttk as ttk
+import tkinter.filedialog as fd
 from pathlib import Path
 import re
 
@@ -75,9 +76,15 @@ def main():
     srcview = SrcView(root)
     srcview.grid(row=0,column=2,columnspan=2,sticky=tk.N+tk.S+tk.E+tk.W)
 
-    def event_printer(*args):
+    def event_printer(e):
         print(f"{args}")
         print(f"{treeview.tree.focus()}")
+        
+    def refresh_tree():
+        filename = fd.askdirectory(title="Open Directory",initialdir="/")
+        p = Path(filename)
+        tree_insert_item(p,"")
+
         
     dummy_nodes = {}
     all_nodes = {}
@@ -110,7 +117,7 @@ def main():
                 syntax_highlight(srcview.text,contents)
                 
 
-    button1 = ttk.Button(root,text="Button1")
+    button1 = ttk.Button(root,text="Reload...",command=refresh_tree)
     button1.grid(row=1,column=2,sticky=tk.W+tk.E)
     button2 = ttk.Button(root,text="Quit",command=root.destroy)
     button2.grid(row=1,column=3,sticky=tk.W+tk.E)
