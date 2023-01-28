@@ -7,6 +7,14 @@ import argparse
 from pathlib import Path
 import re
 
+from dataclasses import dataclass
+
+@dataclass
+class PerformItem:
+    performName : str
+    start : int | None
+    end   : int | None
+
 class TreeView(tk.Frame):
 
     def __init__(self,*args,**kwargs):
@@ -85,11 +93,14 @@ def cobol_src_analyze(contents):
     currentSec = None
     perform_dict = {}
     entrySec = None
+
+    pos = 0
     
     for l in lines:
+
         if pat.search(l):
-            continue
-        if m := expre.search(l):
+            pass
+        elif m := expre.search(l):
             tokentype = m.lastgroup
             word = m.group(m.lastindex + 1)
             # print(f"{tokentype},{word}")
@@ -105,17 +116,22 @@ def cobol_src_analyze(contents):
                 if ( word != "VARYING" and
                      word != "UNTIL" and
                      word != "TIMES" ):
-                    register_multivalue(perform_dict,currentSec,word)
+                    register_multivalue(perform_dict,
+                                        currentSec,
+                                        PerformItem(word,
+                                                    pos + start,
+                                                    pos + end))
             elif tokentype == "call":
                 pass
+
+        pos += len(l) + 1
 
     # print(f"{perform_dict}")
 
     def recursivePrintSec(p,lev):
-
         print(" " * lev, p)
         for c in perform_dict.get(p,[]):
-            recursivePrintSec(c,lev+1)
+            recursivePrintSec(c.performName,lev+1)
 
     recursivePrintSec(entrySec,0)
 
@@ -155,10 +171,9 @@ def main():
         print(f"{treeview.tree.focus()}")
         
     def refresh_tree():
-        filename = fd.askdirectory(title="Open Directory",initialdir="/")
-        p = Path(filename)
-        tree_insert_item(p,"")
-
+        if filename := fd.askdirectory(title="Open Directory",initialdir="/"):
+            p = Path(filename)
+            tree_insert_item(p,"")
         
     dummy_nodes = {}
     all_nodes = {}
@@ -184,9 +199,9 @@ def main():
     calldict = {}
     
     def tree_insert_item2(p,parent):
-        node = treeview2.tree.insert(parent,tk.END,text=p,open=False)
+        node = treeview2.tree.insert(parent,tk.END,text=p.performName,open=False)
         all_nodes2[node] = p            
-        if p in calldict:
+        if p.performName in calldict:
             dummy_nodes2[node] = p            
             treeview2.tree.insert(node,tk.END)
 
@@ -196,7 +211,7 @@ def main():
         if p:
             children = treeview2.tree.get_children(item)
             treeview2.tree.delete(children)
-            for c in calldict[p]:
+            for c in calldict[p.performName]:
                 tree_insert_item2(c,item)
 
     def tree_select_item(e):
@@ -227,8 +242,17 @@ def main():
             calldict.update(retdict)
             if items := treeview2.tree.get_children():
                 treeview2.tree.delete(items)
-            tree_insert_item2(entrySec,"")
-                
+            tree_insert_item2(PerformItem(entrySec,None,None),"")
+
+    def tree_select_item2(e):
+        item = treeview2.tree.focus()
+        p = all_nodes2[item]
+        print(f"p = {p}")
+        match p:
+            case PerformItem(name,s,e) if s is not None:
+                srcview.text.tag_remove("sel","1.0","end")
+                srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
+                srcview.text.see(f"1.0 +{s}c")
                 
     button1 = ttk.Button(root,text="Reload...",command=refresh_tree)
     button1.grid(row=1,column=2,sticky=tk.W+tk.E)
@@ -244,7 +268,8 @@ def main():
     treeview.tree.bind("<<TreeviewClose>>",event_printer)
     treeview.tree.bind("<<TreeviewSelect>>",tree_select_item)
 
-    treeview2.tree.bind("<<TreeviewOpen>>",tree_open_item2)    
+    treeview2.tree.bind("<<TreeviewOpen>>",tree_open_item2)
+    treeview2.tree.bind("<<TreeviewSelect>>",tree_select_item2)
     
     menubar = tk.Menu(root)
     file_menu = tk.Menu(menubar, tearoff=False)
