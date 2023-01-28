@@ -3,6 +3,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 from pathlib import Path
+import re
 
 class TreeView(tk.Frame):
 
@@ -35,6 +36,7 @@ class SrcView(tk.Frame):
         xsb.grid(row=1, column=0, sticky=tk.E+tk.W)
         self.rowconfigure(0,weight=1)
         self.columnconfigure(0,weight=1)
+
         
 def main():
 
@@ -79,6 +81,33 @@ def main():
                 contents = fh.read()
                 srcview.text.delete("1.0","end -1c")
                 srcview.text.insert("1.0",contents)
+                syntax_highlight(srcview.text,contents)
+                
+
+    def syntax_highlight(text,contents):
+
+        text.tag_configure("keyword",foreground="orange")
+        text.tag_configure("func",foreground="violet")
+        text.tag_configure("literal",foreground="violet")    
+        text.tag_configure("funcname",foreground="blue")
+        text.tag_configure("lhs",foreground="orange")        
+
+        token_specification = [
+            ("keyword", r"(?<!\w)(def|class|for|from|if|in)(?!\w)"),
+            ("func",r"(?<!\w)(print|len|open|write)(?!\w)"),
+            ("literal",r'"[^"]+"'),
+            ("funcname",r"(?<=def)\s+\w+"),
+            ("lhs",r"\w+(?=\s+=)")
+        ]
+
+        token_pat = '|'.join(f'(?P<{p}>{pat})'
+                             for p,pat in token_specification)
+        expre = re.compile(token_pat)
+
+        for m in expre.finditer(contents):
+            token_type = m.lastgroup            
+            start,end = m.span(token_type)
+            text.tag_add(token_type,f"1.0 +{start}c",f"1.0 +{end}c")
 
     button1 = ttk.Button(root,text="Button1")
     button1.grid(row=1,column=0,sticky=tk.W+tk.E)
