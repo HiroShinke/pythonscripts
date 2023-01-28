@@ -76,7 +76,7 @@ def main():
     srcview = SrcView(root)
     srcview.grid(row=0,column=2,columnspan=2,sticky=tk.N+tk.S+tk.E+tk.W)
 
-    def event_printer(e):
+    def event_printer(*args):
         print(f"{args}")
         print(f"{treeview.tree.focus()}")
         
@@ -129,6 +129,14 @@ def main():
     treeview.tree.bind("<<TreeviewOpen>>",tree_open_item)
     treeview.tree.bind("<<TreeviewClose>>",event_printer)
     treeview.tree.bind("<<TreeviewSelect>>",tree_select_item)    
+    
+    menubar = tk.Menu(root)
+    file_menu = tk.Menu(menubar, tearoff=False)
+    file_menu.add_command(label="Open new file...", command=refresh_tree)
+    file_menu.add_command(label="Quit", command=root.destroy)
+    menubar.add_cascade(label="File", menu = file_menu)
+    root.config(menu = menubar)
+
     
     p = Path(".")
     tree_insert_item(p,"")
