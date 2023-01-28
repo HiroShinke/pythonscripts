@@ -164,16 +164,17 @@ def main():
     srcEncoding = "euc-jp"
     
     root = tk.Tk()
+    paned = tk.PanedWindow(root)
     root.title("simple dir browser")
     
-    treeview = TreeView(root)
-    treeview.grid(row=0,column=0,sticky=tk.N+tk.S+tk.E+tk.W)
+    treeview = TreeView(paned)
+    paned.add(treeview)
 
-    treeview2 = TreeView(root)
-    treeview2.grid(row=0,column=1,sticky=tk.N+tk.S+tk.E+tk.W)
+    treeview2 = TreeView(paned)
+    paned.add(treeview2)
 
-    srcview = SrcView(root)
-    srcview.grid(row=0,column=2,columnspan=2,sticky=tk.N+tk.S+tk.E+tk.W)
+    srcview = SrcView(paned)
+    paned.add(srcview)
 
     def event_printer(*args):
         print(f"{args}")
@@ -278,7 +279,9 @@ def main():
                 srcview.text.tag_remove("sel","1.0","end")
                 srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
                 srcview.text.see(f"1.0 +{s}c")
-                
+
+
+    paned.grid(row=0,column=0,columnspan=4,sticky=tk.N+tk.S+tk.E+tk.W)
     button1 = ttk.Button(root,text="Reload...",command=refresh_tree)
     button1.grid(row=1,column=2,sticky=tk.W+tk.E)
     button2 = ttk.Button(root,text="Quit",command=root.destroy)
