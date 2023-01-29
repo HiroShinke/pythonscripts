@@ -21,7 +21,7 @@ class CallItem:
     start : int
     end   : int
 
-class TreeView(tk.Frame):
+class Treeview(tk.Frame):
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
@@ -37,6 +37,39 @@ class TreeView(tk.Frame):
         self.rowconfigure(0,weight=1)
         self.columnconfigure(0,weight=1)
 
+class DirTreeview(Treeview):
+
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+
+        self.dummy_nodes = {}
+        self.all_nodes = {}
+
+        self.tree.bind("<<TreeviewOpen>>",self.tree_open_item)
+
+    def tree_insert_item(self,p,parent):
+        node = self.tree.insert(parent,tk.END,text=p.name,open=False)
+        self.all_nodes[node] = p            
+        if p.is_dir():
+            self.dummy_nodes[node] = p            
+            self.tree.insert(node,tk.END)
+                
+    def tree_open_item(self,e):
+        item = self.tree.focus()
+        print(f"item = {item}")
+        p = self.dummy_nodes.pop(item,False)
+        if p:
+            children = self.tree.get_children(item)
+            self.tree.delete(children)
+            for c in p.iterdir():
+                self.tree_insert_item(c,item)
+                
+
+class Gprphtreeview(Treeview):
+
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        
 class SrcView(tk.Frame):
 
     def __init__(self,*args,**kwargs):
@@ -165,12 +198,12 @@ def main():
     
     root = tk.Tk()
     paned = tk.PanedWindow(root)
-    root.title("simple dir browser")
+    root.title("Simple source browser")
     
-    treeview = TreeView(paned)
+    treeview = DirTreeview(paned)
     paned.add(treeview)
 
-    treeview2 = TreeView(paned)
+    treeview2 = Treeview(paned)
     paned.add(treeview2)
 
     srcview = SrcView(paned)
@@ -185,24 +218,6 @@ def main():
             p = Path(filename)
             tree_insert_item(p,"")
         
-    dummy_nodes = {}
-    all_nodes = {}
-    
-    def tree_insert_item(p,parent):
-        node = treeview.tree.insert(parent,tk.END,text=p.name,open=False)
-        all_nodes[node] = p            
-        if p.is_dir():
-            dummy_nodes[node] = p            
-            treeview.tree.insert(node,tk.END)
-
-    def tree_open_item(e):
-        item = treeview.tree.focus()
-        p = dummy_nodes.pop(item,False)
-        if p:
-            children = treeview.tree.get_children(item)
-            treeview.tree.delete(children)
-            for c in p.iterdir():
-                tree_insert_item(c,item)
 
     dummy_nodes2 = {}
     all_nodes2 = {}
@@ -240,7 +255,7 @@ def main():
         item_analyze_src(item)
         
     def item_view_src(item):
-        p = all_nodes[item]
+        p = treeview.all_nodes[item]
         if p.is_file():
             with open(p,encoding=srcEncoding) as fh:
                 contents = fh.read()
@@ -249,7 +264,7 @@ def main():
                 syntax_highlight(srcview.text,contents)
         
     def item_analyze_src(item):
-        p = all_nodes[item]
+        p = treeview.all_nodes[item]
         if p.is_file():
             with open(p,encoding=srcEncoding) as fh:
                 contents = fh.read()
@@ -292,8 +307,6 @@ def main():
     root.rowconfigure(0,weight=1)
     
     treeview.tree.bind("<Double-1>",event_printer)
-    treeview.tree.bind("<<TreeviewOpen>>",tree_open_item)
-    treeview.tree.bind("<<TreeviewClose>>",event_printer)
     treeview.tree.bind("<<TreeviewSelect>>",tree_select_item)
 
     treeview2.tree.bind("<<TreeviewOpen>>",tree_open_item2)
@@ -308,7 +321,7 @@ def main():
 
     
     p = Path(targetDir)
-    tree_insert_item(p,"")
+    treeview.tree_insert_item(p,"")
             
     root.mainloop()
 
