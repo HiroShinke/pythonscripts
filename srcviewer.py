@@ -64,12 +64,59 @@ class DirTreeview(Treeview):
             for c in p.iterdir():
                 self.tree_insert_item(c,item)
                 
+    def clear_item(self):
+        self.dummy_nodes.clear()
+        self.all_nodes.clear()
+        if items := self.tree.get_children():
+            self.tree.delete(items)
 
-class Gprphtreeview(Treeview):
+    def tree_focus(self):
+        item = self.tree.focus()
+        return self.all_nodes.get(item,None)
 
-    def __init__(self,*args,**kwargs):
+                
+class GraphTreeview(Treeview):
+
+    def __init__(self,*args,get_item=None,get_children=None,**kwargs):
+
         super().__init__(*args,**kwargs)
-        
+
+        self.dummy_nodes = {}
+        self.all_nodes = {}
+
+        self.get_children = get_children
+        self.get_item = get_item
+        self.tree.bind("<<TreeviewOpen>>",self.tree_open_item)
+
+    def tree_insert_item(self,p,parent):
+
+        param = self.get_item(p)
+                
+        node = self.tree.insert(parent,tk.END,**param,open=False)
+        self.all_nodes[node] = p            
+        if self.get_children(p):
+            self.dummy_nodes[node] = p            
+            self.tree.insert(node,tk.END)
+
+    def tree_open_item(self,e):
+        item = self.tree.focus()
+        p = self.dummy_nodes.pop(item,False)
+        if p:
+            children = self.tree.get_children(item)
+            self.tree.delete(children)
+            for c in self.get_children(p):
+                self.tree_insert_item(c,item)
+
+    def clear_item(self):
+        self.dummy_nodes.clear()
+        self.all_nodes.clear()
+        if items := self.tree.get_children():
+            self.tree.delete(items)
+
+    def tree_focus(self):
+        item = self.tree.focus()
+        return self.all_nodes.get(item,None)
+
 class SrcView(tk.Frame):
 
     def __init__(self,*args,**kwargs):
@@ -203,7 +250,22 @@ def main():
     treeview = DirTreeview(paned)
     paned.add(treeview)
 
-    treeview2 = Treeview(paned)
+    calldict = {}
+    
+    def get_item(p):
+        match p:
+            case PerformItem():
+                tag = "perform"
+            case CallItem():
+                tag = "call"
+            case _:
+                tag = None
+        return dict(text = p.name, tag  = tag )
+
+    def get_children(p):
+        return calldict.get(p.name,[])
+    
+    treeview2 = GraphTreeview(paned,get_item=get_item,get_children=get_children)
     paned.add(treeview2)
 
     srcview = SrcView(paned)
@@ -216,46 +278,15 @@ def main():
     def refresh_tree():
         if filename := fd.askdirectory(title="Open Directory",initialdir="/"):
             p = Path(filename)
-            tree_insert_item(p,"")
+            treeview.tree_insert_item(p,"")
         
-
-    dummy_nodes2 = {}
-    all_nodes2 = {}
-    calldict = {}
-    
-    def tree_insert_item2(p,parent):
-
-        match p:
-            case PerformItem():
-                tag = "perform"
-            case CallItem():
-                tag = "call"
-            case _:
-                tag = None
-                
-        node = treeview2.tree.insert(parent,tk.END,text=p.name,open=False,tag=tag)
-        all_nodes2[node] = p            
-        if p.name in calldict:
-            dummy_nodes2[node] = p            
-            treeview2.tree.insert(node,tk.END)
-
-    def tree_open_item2(e):
-        item = treeview2.tree.focus()
-        p = dummy_nodes2.pop(item,False)
-        if p:
-            children = treeview2.tree.get_children(item)
-            treeview2.tree.delete(children)
-            for c in calldict[p.name]:
-                tree_insert_item2(c,item)
-
     def tree_select_item(e):
-        item = treeview.tree.focus()
-        print(f"{item}")
-        item_view_src(item)
-        item_analyze_src(item)
+        p = treeview.tree_focus()
+        print(f"{p}")
+        item_view_src(p)
+        item_analyze_src(p)
         
-    def item_view_src(item):
-        p = treeview.all_nodes[item]
+    def item_view_src(p):
         if p.is_file():
             with open(p,encoding=srcEncoding) as fh:
                 contents = fh.read()
@@ -263,27 +294,22 @@ def main():
                 srcview.text.insert("1.0",contents)
                 syntax_highlight(srcview.text,contents)
         
-    def item_analyze_src(item):
-        p = treeview.all_nodes[item]
+    def item_analyze_src(p):
         if p.is_file():
             with open(p,encoding=srcEncoding) as fh:
                 contents = fh.read()
                 entrySec,retdict = cobol_src_analyze(contents)
 
-            dummy_nodes2.clear()
-            all_nodes2.clear()
+            treeview2.clear_item()
             calldict.clear()
             calldict.update(retdict)
-            if items := treeview2.tree.get_children():
-                treeview2.tree.delete(items)
     
             treeview2.tree.tag_configure("perform",foreground="violet")
             treeview2.tree.tag_configure("call",foreground="orange")
-            tree_insert_item2(PerformItem(entrySec,None,None),"")
+            treeview2.tree_insert_item(PerformItem(entrySec,None,None),"")
 
     def tree_select_item2(e):
-        item = treeview2.tree.focus()
-        p = all_nodes2[item]
+        p = treeview2.tree_focus()
         print(f"p = {p}")
         match p:
             case PerformItem(name,s,e) if s is not None:
@@ -308,8 +334,6 @@ def main():
     
     treeview.tree.bind("<Double-1>",event_printer)
     treeview.tree.bind("<<TreeviewSelect>>",tree_select_item)
-
-    treeview2.tree.bind("<<TreeviewOpen>>",tree_open_item2)
     treeview2.tree.bind("<<TreeviewSelect>>",tree_select_item2)
     
     menubar = tk.Menu(root)
