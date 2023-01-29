@@ -37,45 +37,8 @@ class Treeview(tk.Frame):
         self.rowconfigure(0,weight=1)
         self.columnconfigure(0,weight=1)
 
-class DirTreeview(Treeview):
 
-    def __init__(self,*args,**kwargs):
-        super().__init__(*args,**kwargs)
-
-        self.dummy_nodes = {}
-        self.all_nodes = {}
-
-        self.tree.bind("<<TreeviewOpen>>",self.tree_open_item)
-
-    def tree_insert_item(self,p,parent):
-        node = self.tree.insert(parent,tk.END,text=p.name,open=False)
-        self.all_nodes[node] = p            
-        if p.is_dir():
-            self.dummy_nodes[node] = p            
-            self.tree.insert(node,tk.END)
-                
-    def tree_open_item(self,e):
-        item = self.tree.focus()
-        print(f"item = {item}")
-        p = self.dummy_nodes.pop(item,False)
-        if p:
-            children = self.tree.get_children(item)
-            self.tree.delete(children)
-            for c in p.iterdir():
-                self.tree_insert_item(c,item)
-                
-    def clear_item(self):
-        self.dummy_nodes.clear()
-        self.all_nodes.clear()
-        if items := self.tree.get_children():
-            self.tree.delete(items)
-
-    def tree_focus(self):
-        item = self.tree.focus()
-        return self.all_nodes.get(item,None)
-
-                
-class GraphTreeview(Treeview):
+class ModelTreeview(Treeview):
 
     def __init__(self,*args,get_item=None,get_children=None,**kwargs):
 
@@ -246,13 +209,16 @@ def main():
     root = tk.Tk()
     paned = tk.PanedWindow(root)
     root.title("Simple source browser")
+
+    def get_item(p): return dict( text = p.name )
+    def get_children(p): return p.iterdir() if p.is_dir() else None
     
-    treeview = DirTreeview(paned)
+    treeview = ModelTreeview(paned,get_item=get_item,get_children=get_children)
     paned.add(treeview)
 
     calldict = {}
     
-    def get_item(p):
+    def get_item2(p):
         match p:
             case PerformItem():
                 tag = "perform"
@@ -262,10 +228,10 @@ def main():
                 tag = None
         return dict(text = p.name, tag  = tag )
 
-    def get_children(p):
+    def get_children2(p):
         return calldict.get(p.name,[])
     
-    treeview2 = GraphTreeview(paned,get_item=get_item,get_children=get_children)
+    treeview2 = ModelTreeview(paned,get_item=get_item2,get_children=get_children2)
     paned.add(treeview2)
 
     srcview = SrcView(paned)
