@@ -132,7 +132,7 @@ def cobol_src_analyze(contents):
         ("perform", r"(?<!\w)PERFORM\s+([\w-]+)"),
         ("division", r"(\S+)\s+DIVISION(?!\w)"),
         ("section",r"(\S+)\s+SECTION\s*\."),
-        ("call", r'(?<!\w)CALL\s+["\']([^\.]+)["\']')
+        ("call",  r"""(?<!\w)CALL\s+["']([^"']+)['"]""")
     ]
     line_pat = '|'.join(f'(?P<{p}>{pat})'
                          for p,pat in line_specification)
@@ -196,6 +196,23 @@ def register_multivalue(dict,k,v):
         dict[k] = e = [] 
     e.append(v)
 
+
+def rec_find_file(p,proc,*args,**kwargs):
+
+    if proc(p,*args,**kwargs):
+        return p
+
+    if p.is_dir():
+        for c in p.iterdir():
+            if q := rec_find_file(c,proc,*args,**kwargs):
+                return q
+    return None
+
+def includedir_find(incdir,w):
+    def name_equal(p):
+        return p.is_file() and p.stem == w
+    return rec_find_file(incdir,name_equal)
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -203,8 +220,9 @@ def main():
     parser.add_argument("--incdir", "-i")    
     args = parser.parse_args()
     
-    targetDir = args.srcdir if args.srcdir else "."
+    targetDir = Path(args.srcdir if args.srcdir else ".")
     srcEncoding = "euc-jp"
+    includeDir = Path(args.incdir if args.incdir else ".")
     
     root = tk.Tk()
     paned = tk.PanedWindow(root)
@@ -216,6 +234,32 @@ def main():
     treeview = ModelTreeview(paned,get_item=get_item,get_children=get_children)
     paned.add(treeview)
 
+    get_callee_cache = {}
+    
+    def get_callee(p):
+
+        if m := get_callee_cache.get(p,None):
+            return m
+
+        ret = set()
+        with open(p,encoding=srcEncoding) as fh:
+            lines = fh.read().splitlines()
+            for l in lines:
+                if re.search(r".{6]\*",l):
+                    continue
+                elif m := re.search(r"""\sCALL\s+["']([^"']+)["']""",l):
+                    w = m.group(1)
+                    print(f"w = {w}")
+                    if q := includedir_find(includeDir,w):
+                        ret.add(q)
+
+        get_callee_cache[p] = ret
+        return ret
+                        
+    
+    calltree = ModelTreeview(paned,get_item=get_item,get_children=get_callee)
+    paned.add(calltree)
+    
     calldict = {}
     
     def get_item2(p):
@@ -251,6 +295,9 @@ def main():
         print(f"{p}")
         item_view_src(p)
         item_analyze_src(p)
+        if p.is_file():
+            calltree.clear_item()
+            calltree.tree_insert_item(p,"")        
         
     def item_view_src(p):
         if p.is_file():
@@ -315,9 +362,7 @@ def main():
     menubar.add_cascade(label="File", menu = file_menu)
     root.config(menu = menubar)
 
-    
-    p = Path(targetDir)
-    treeview.tree_insert_item(p,"")
+    treeview.tree_insert_item(targetDir,"")
             
     root.mainloop()
 
