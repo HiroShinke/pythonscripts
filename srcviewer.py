@@ -256,9 +256,11 @@ def main():
         if p.is_file():
             with open(p,encoding=srcEncoding) as fh:
                 contents = fh.read()
+                srcview.text.config(state='normal')
                 srcview.text.delete("1.0","end -1c")
                 srcview.text.insert("1.0",contents)
                 syntax_highlight(srcview.text,contents)
+                srcview.text.config(state='disabled')
         
     def item_analyze_src(p):
         if p.is_file():
@@ -279,13 +281,17 @@ def main():
         print(f"p = {p}")
         match p:
             case PerformItem(name,s,e) if s is not None:
+                srcview.text.config(state='normal')
                 srcview.text.tag_remove("sel","1.0","end")
                 srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
                 srcview.text.see(f"1.0 +{s}c")
+                srcview.text.config(state='disabled')                
             case CallItem(name,s,e) if s is not None:
+                srcview.text.config(state='normal')
                 srcview.text.tag_remove("sel","1.0","end")
                 srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
                 srcview.text.see(f"1.0 +{s}c")
+                srcview.text.config(state='disabled')                
 
 
     paned.grid(row=0,column=0,columnspan=4,sticky=tk.N+tk.S+tk.E+tk.W)
