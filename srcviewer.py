@@ -103,7 +103,18 @@ def syntax_highlight(text,contents):
     text.tag_configure("func",foreground="violet")
     text.tag_configure("literal",foreground="violet")    
     text.tag_configure("funcname",foreground="blue")
-    text.tag_configure("lhs",foreground="orange")        
+    text.tag_configure("lhs",foreground="orange")
+
+    def open_link(e):
+        print(f"text button : event = {e}")
+        position = f"@{e.x},{e.y} +1c"
+        index = text.index(position)
+        prevrange = text.tag_prevrange("literal",index)
+        literal = text.get(*prevrange)
+        print(f"literal = {literal}")
+
+    text.tag_bind("literal","<Button-1>",open_link)
+
     
     token_specification = [
         ("keyword", r"(?<!\w)(def|class|for|from|if|in)(?!\w)"),
@@ -188,7 +199,74 @@ def cobol_src_analyze(contents):
     recursivePrintSec(entrySec,0)
 
     return (entrySec,perform_dict)
+
+
+def cobol_syntax_highlight(text,contents):
+
+    text.tag_configure("comment",foreground="violet")
+    text.tag_configure("keyword",foreground="pink")
+    text.tag_configure("literal",foreground="blue")    
+    text.tag_configure("callname",foreground="orange")
+    text.tag_configure("section",foreground="orange")
     
+    def open_link(e):
+        print(f"text button : event = {e}")
+        position = f"@{e.x},{e.y} +1c"
+        index = text.index(position)
+        prevrange = text.tag_prevrange("callname",index)
+        callname = text.get(*prevrange)
+        print(f"literal = {callname}")
+
+    text.tag_bind("callname","<Button-1>",open_link)
+    text.tag_bind("callname", "<Enter>", lambda _: text.config(cursor="hand2"))
+    text.tag_bind("callname", "<Leave>", lambda _: text.config(cursor=""))    
+                  
+    lines = contents.splitlines()
+
+    pat = re.compile(r"^.{6}\*.*")
+
+    line_specification = [
+        ("perform", r"(?<!\w)PERFORM\s+([\w-]+)"),
+        ("division", r"(\S+)\s+DIVISION(?!\w)"),
+        ("section",r"(\S+)\s+SECTION\s*\."),
+        ("callname",  r"""(?<!\w)CALL\s+["']([^"']+)['"]""")
+    ]
+    line_pat = '|'.join(f'(?P<{p}>{pat})'
+                         for p,pat in line_specification)
+
+    expre = re.compile(line_pat)
+    pos = 0
+    
+    for l in lines:
+
+        if m := pat.search(l):
+            start0,end0 = m.span()
+            start = start0 + pos
+            end   = end0 + pos
+            text.tag_add("comment",f"1.0 +{start}c",f"1.0 +{end}c")
+        elif m := expre.search(l):
+            tokentype = m.lastgroup
+            word = m.group(m.lastindex + 1)
+            # print(f"{tokentype},{word}")
+            start0,end0 = m.span(tokentype)
+            start = start0 + pos
+            end   = end0 + pos
+            if tokentype == "division":
+                text.tag_add("division",f"1.0 +{start}c",f"1.0 +{end}c")
+            elif tokentype == "section":
+                text.tag_add("section",f"1.0 +{start}c",f"1.0 +{end}c")
+            elif tokentype == "literal":
+                text.tag_add("literal",f"1.0 +{start}c",f"1.0 +{end}c")
+            elif tokentype == "perform":
+                if ( word != "VARYING" and
+                     word != "UNTIL" and
+                     word != "TIMES" ):
+                    pass
+            elif tokentype == "callname":
+                text.tag_add("callname",f"1.0 +{start}c",f"1.0 +{end}c")
+
+        pos += len(l) + 1
+
             
 def register_multivalue(dict,k,v):
     e = dict.get(k,None)
@@ -306,7 +384,8 @@ def main():
                 srcview.text.config(state='normal')
                 srcview.text.delete("1.0","end -1c")
                 srcview.text.insert("1.0",contents)
-                syntax_highlight(srcview.text,contents)
+                # syntax_highlight(srcview.text,contents)
+                cobol_syntax_highlight(srcview.text,contents)                
                 srcview.text.config(state='disabled')
         
     def item_analyze_src(p):
