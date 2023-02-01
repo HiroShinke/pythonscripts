@@ -229,7 +229,8 @@ def cobol_syntax_highlight(text,contents):
         ("perform", r"(?<!\w)PERFORM\s+([\w-]+)"),
         ("division", r"(\S+)\s+DIVISION(?!\w)"),
         ("section",r"(\S+)\s+SECTION\s*\."),
-        ("callname",  r"""(?<!\w)CALL\s+["']([^"']+)['"]""")
+        ("callname",  r"""(?<!\w)CALL\s+["']([^"']+)['"]"""),
+        ("keyword", r"(?<=\s)(COPY|MOVE|ADD|IF|WHEN|EVALUATE|GO|TO)(?=\s)")
     ]
     line_pat = '|'.join(f'(?P<{p}>{pat})'
                          for p,pat in line_specification)
@@ -257,6 +258,8 @@ def cobol_syntax_highlight(text,contents):
                 text.tag_add("section",f"1.0 +{start}c",f"1.0 +{end}c")
             elif tokentype == "literal":
                 text.tag_add("literal",f"1.0 +{start}c",f"1.0 +{end}c")
+            elif tokentype == "keyword":
+                text.tag_add("keyword",f"1.0 +{start}c",f"1.0 +{end}c")
             elif tokentype == "perform":
                 if ( word != "VARYING" and
                      word != "UNTIL" and
@@ -386,7 +389,7 @@ def main():
                 srcview.text.insert("1.0",contents)
                 # syntax_highlight(srcview.text,contents)
                 cobol_syntax_highlight(srcview.text,contents)                
-                srcview.text.config(state='disabled')
+                # srcview.text.config(state='disabled')
         
     def item_analyze_src(p):
         if p.is_file():
@@ -411,13 +414,13 @@ def main():
                 srcview.text.tag_remove("sel","1.0","end")
                 srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
                 srcview.text.see(f"1.0 +{s}c")
-                srcview.text.config(state='disabled')                
+                # srcview.text.config(state='disabled')                
             case CallItem(name,s,e) if s is not None:
                 srcview.text.config(state='normal')
                 srcview.text.tag_remove("sel","1.0","end")
                 srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
                 srcview.text.see(f"1.0 +{s}c")
-                srcview.text.config(state='disabled')                
+                # srcview.text.config(state='disabled')                
 
 
     paned.grid(row=0,column=0,columnspan=4,sticky=tk.N+tk.S+tk.E+tk.W)
@@ -433,6 +436,60 @@ def main():
     treeview.tree.bind("<Double-1>",event_printer)
     treeview.tree.bind("<<TreeviewSelect>>",tree_select_item)
     treeview2.tree.bind("<<TreeviewSelect>>",tree_select_item2)
+
+    
+    def show_dialog(e):
+
+        frame = tk.Toplevel(root)
+        entry   = ttk.Entry(frame)
+
+        findresult = []
+        pos = 0
+
+        def find_text_select():
+
+            nonlocal pos
+            text = entry.get()
+
+            if text:
+                src = srcview.text.get("1.0","end -1c")
+                findresult.clear()
+                pos = 0
+                findresult.extend(re.finditer(text,src))
+                if findresult:
+                    s,e=findresult[pos].span()                
+                    srcview.text.tag_remove("sel","1.0","end")
+                    srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
+                    srcview.text.see(f"1.0 +{s}c")
+
+        def find_next_select():
+
+            nonlocal pos
+
+            if findresult:
+                pos += 1
+                s,e=findresult[pos].span()
+                srcview.text.tag_remove("sel","1.0","end")
+                srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
+                srcview.text.see(f"1.0 +{s}c")
+
+
+        button1 = ttk.Button(frame,text="Find",command=find_text_select)
+        button2 = ttk.Button(frame,text="Next",command=find_next_select)
+        button3 = ttk.Button(frame,text="Close",command=frame.destroy)
+        entry.pack()
+        button1.pack(side=tk.LEFT)
+        button2.pack(side=tk.LEFT)
+        button3.pack(side=tk.LEFT)
+
+        # frame.focus_force()
+        entry.focus()
+        
+        # frame.grab_set()
+        
+    srcview.text.bind("<Button-1>",event_printer)
+    srcview.text.bind("<Control-f>",show_dialog)
+    srcview.text.bind("<Key>", lambda e: "break")
     
     menubar = tk.Menu(root)
     file_menu = tk.Menu(menubar, tearoff=False)
