@@ -294,6 +294,72 @@ def includedir_find(incdir,w):
         return p.is_file() and p.stem == w
     return rec_find_file(incdir,name_equal)
 
+
+def show_dialog_func(e,root,srcview):
+
+    frame = tk.Toplevel(root)
+        
+    frame.geometry(f"+{srcview.winfo_x()+e.x}+{srcview.winfo_y()+e.y}")
+    entry = ttk.Entry(frame)
+    label = tk.Label(frame, text="Search for ...", anchor=tk.W)
+
+    findresult = []
+    pos = 0
+
+    def find_text_select():
+        
+        nonlocal pos
+        text = entry.get()
+        
+        if text:
+            src = srcview.text.get("1.0","end -1c")
+            findresult.clear()
+            findresult.extend(re.finditer(text,src))
+            if findresult:
+                pos = 0
+                count = len(findresult)                    
+                label.config(text = f"Found {pos+1}/{count} item")
+                s,e=findresult[pos].span()                
+                srcview.text.tag_remove("sel","1.0","end")
+                srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
+                srcview.text.see(f"1.0 +{s}c")
+            else:
+                label.config(text = "Not Found ...")
+
+    def find_next_select():
+
+        nonlocal pos
+
+        if findresult and pos + 1 < len(findresult):
+            pos += 1
+            count = len(findresult)                
+            label.config(text = f"Found {pos+1}/{count} item")
+            s,e=findresult[pos].span()
+            srcview.text.tag_remove("sel","1.0","end")
+            srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
+            srcview.text.see(f"1.0 +{s}c")
+        else:
+            pos = -1
+            label.config(text = "Wrapping Search from Start ...")
+            
+            
+    button1 = ttk.Button(frame,text="Find",command=find_text_select)
+    button2 = ttk.Button(frame,text="Next",command=find_next_select)
+    button3 = ttk.Button(frame,text="Close",command=frame.destroy)
+    entry.grid(row=0,column=0,columnspan=3,sticky=tk.W+tk.E)
+    label.grid(row=1,column=0,columnspan=3,sticky=tk.W+tk.E)
+    button1.grid(row=2,column=0,sticky=tk.W+tk.E)
+    button2.grid(row=2,column=1,sticky=tk.W+tk.E)
+    button3.grid(row=2,column=2,sticky=tk.W+tk.E)
+    frame.columnconfigure(0,weight=1)
+    frame.columnconfigure(1,weight=1)
+    frame.columnconfigure(2,weight=1)        
+    # frame.focus_force()
+    entry.focus()
+    
+    # frame.grab_set()
+
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -437,70 +503,10 @@ def main():
     treeview.tree.bind("<<TreeviewSelect>>",tree_select_item)
     treeview2.tree.bind("<<TreeviewSelect>>",tree_select_item2)
 
-    
+
     def show_dialog(e):
-
-        frame = tk.Toplevel(root)
-        
-        frame.geometry(f"+{srcview.winfo_x()+e.x}+{srcview.winfo_y()+e.y}")
-        entry = ttk.Entry(frame)
-        label = tk.Label(frame, text="Search for ...", anchor=tk.W)
-
-        findresult = []
-        pos = 0
-
-        def find_text_select():
-
-            nonlocal pos
-            text = entry.get()
-
-            if text:
-                src = srcview.text.get("1.0","end -1c")
-                findresult.clear()
-                findresult.extend(re.finditer(text,src))
-                if findresult:
-                    pos = 0
-                    count = len(findresult)                    
-                    label.config(text = f"Found {pos+1}/{count} item")
-                    s,e=findresult[pos].span()                
-                    srcview.text.tag_remove("sel","1.0","end")
-                    srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
-                    srcview.text.see(f"1.0 +{s}c")
-                else:
-                    label.config(text = "Not Found ...")
-
-        def find_next_select():
-
-            nonlocal pos
-
-            if findresult and pos + 1 < len(findresult):
-                pos += 1
-                count = len(findresult)                
-                label.config(text = f"Found {pos+1}/{count} item")
-                s,e=findresult[pos].span()
-                srcview.text.tag_remove("sel","1.0","end")
-                srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
-                srcview.text.see(f"1.0 +{s}c")
-            else:
-                pos = -1
-                label.config(text = "Wrapping Search from Start ...")
-
-
-        button1 = ttk.Button(frame,text="Find",command=find_text_select)
-        button2 = ttk.Button(frame,text="Next",command=find_next_select)
-        button3 = ttk.Button(frame,text="Close",command=frame.destroy)
-        entry.grid(row=0,column=0,columnspan=3,sticky=tk.W+tk.E)
-        label.grid(row=1,column=0,columnspan=3,sticky=tk.W+tk.E)
-        button1.grid(row=2,column=0,sticky=tk.W+tk.E)
-        button2.grid(row=2,column=1,sticky=tk.W+tk.E)
-        button3.grid(row=2,column=2,sticky=tk.W+tk.E)
-        frame.columnconfigure(0,weight=1)
-        frame.columnconfigure(1,weight=1)
-        frame.columnconfigure(2,weight=1)        
-        # frame.focus_force()
-        entry.focus()
-        
-        # frame.grab_set()
+        show_dialog_func(e,root,srcview)
+    
         
     srcview.text.bind("<Button-1>",event_printer)
     srcview.text.bind("<Control-f>",show_dialog)
