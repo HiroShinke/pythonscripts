@@ -441,7 +441,10 @@ def main():
     def show_dialog(e):
 
         frame = tk.Toplevel(root)
-        entry   = ttk.Entry(frame)
+        
+        frame.geometry(f"+{srcview.winfo_x()+e.x}+{srcview.winfo_y()+e.y}")
+        entry = ttk.Entry(frame)
+        label = tk.Label(frame, text="Search for ...", anchor=tk.W)
 
         findresult = []
         pos = 0
@@ -454,34 +457,46 @@ def main():
             if text:
                 src = srcview.text.get("1.0","end -1c")
                 findresult.clear()
-                pos = 0
                 findresult.extend(re.finditer(text,src))
                 if findresult:
+                    pos = 0
+                    count = len(findresult)                    
+                    label.config(text = f"Found {pos+1}/{count} item")
                     s,e=findresult[pos].span()                
                     srcview.text.tag_remove("sel","1.0","end")
                     srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
                     srcview.text.see(f"1.0 +{s}c")
+                else:
+                    label.config(text = "Not Found ...")
 
         def find_next_select():
 
             nonlocal pos
 
-            if findresult:
+            if findresult and pos + 1 < len(findresult):
                 pos += 1
+                count = len(findresult)                
+                label.config(text = f"Found {pos+1}/{count} item")
                 s,e=findresult[pos].span()
                 srcview.text.tag_remove("sel","1.0","end")
                 srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
                 srcview.text.see(f"1.0 +{s}c")
+            else:
+                pos = -1
+                label.config(text = "Wrapping Search from Start ...")
 
 
         button1 = ttk.Button(frame,text="Find",command=find_text_select)
         button2 = ttk.Button(frame,text="Next",command=find_next_select)
         button3 = ttk.Button(frame,text="Close",command=frame.destroy)
-        entry.pack()
-        button1.pack(side=tk.LEFT)
-        button2.pack(side=tk.LEFT)
-        button3.pack(side=tk.LEFT)
-
+        entry.grid(row=0,column=0,columnspan=3,sticky=tk.W+tk.E)
+        label.grid(row=1,column=0,columnspan=3,sticky=tk.W+tk.E)
+        button1.grid(row=2,column=0,sticky=tk.W+tk.E)
+        button2.grid(row=2,column=1,sticky=tk.W+tk.E)
+        button3.grid(row=2,column=2,sticky=tk.W+tk.E)
+        frame.columnconfigure(0,weight=1)
+        frame.columnconfigure(1,weight=1)
+        frame.columnconfigure(2,weight=1)        
         # frame.focus_force()
         entry.focus()
         
