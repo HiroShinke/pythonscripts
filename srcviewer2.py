@@ -515,6 +515,9 @@ def main():
     # w = root.winfo_width()
     w = 400
     root.geometry(f"{w}x{h}+0+0")
+
+    print(f"root.winfo_height = {root.winfo_height()}")
+    print(f"root.winfo_screenheight = {root.winfo_screenheight()}")
     
     def event_printer(*args):
         print(f"{args}")
@@ -534,17 +537,27 @@ def main():
     srcwindow_list = []
 
     def srcview_rearrange():
+        
         window_num = len(srcwindow_list)
+        titlebar_height = root.winfo_rooty() - root.winfo_y()
+        border_width    = root.winfo_rootx() - root.winfo_x()        
         x = root.winfo_width()
+        rh = root.winfo_height()        
         sw = root.winfo_screenwidth()
         sh = root.winfo_screenheight()
-        dh  = sh // window_num
+        dh  = sh // window_num - 2 * titlebar_height
         w = sw - x
         y = 0        
 
+        print(f"titlebar_height = {titlebar_height}")
+        print(f"titlebar_height = {titlebar_height}")
+        print(f"rh = {rh}")
+        print(f"sh = {sh}")
+        print(f"dh = {dh}")
+        
         for win in srcwindow_list:
             win.geometry(f"{w}x{dh}+{x}+{y}")
-            y += dh
+            y += dh + 2 * titlebar_height
 
     def calltree_select_item():
         p = calltree.tree_focus()
