@@ -468,8 +468,8 @@ def main():
     calltree = ModelTreeview(paned,get_item=get_item,get_children=get_callee)
     paned.add(calltree)
 
-    performmodel,treeview2,srcview = views_for_src(paned)
-    paned.add(treeview2)
+    performmodel,performtree,srcview = views_for_src(paned)
+    paned.add(performtree)
     paned.add(srcview)
 
     def event_printer(*args):
@@ -493,14 +493,14 @@ def main():
                 contents = fh.read()
                 entrySec,retdict = cobol_src_analyze(contents)
 
-            treeview2.clear_item()
+            performtree.clear_item()
             performmodel.calldict.clear()
 
             if entrySec:
                 performmodel.calldict.update(retdict)
-                treeview2.tree.tag_configure("perform",foreground="violet")
-                treeview2.tree.tag_configure("call",foreground="orange")
-                treeview2.tree_insert_item(PerformItem(entrySec,None,None),"")
+                performtree.tree.tag_configure("perform",foreground="violet")
+                performtree.tree.tag_configure("call",foreground="orange")
+                performtree.tree_insert_item(PerformItem(entrySec,None,None),"")
 
     def calltree_select_item(e):
         p = calltree.tree_focus()
