@@ -373,7 +373,7 @@ def main():
     
     root = tk.Tk()
     paned = tk.PanedWindow(root)
-    root.title("Simple source browser")
+    root.title("Simple Source browser")
 
     def get_item(p): return dict( text = p.name )
     def get_children(p): return p.iterdir() if p.is_dir() else None
@@ -439,13 +439,32 @@ def main():
         
     def tree_select_item(e):
         p = treeview.tree_focus()
-        print(f"{p}")
-        item_view_src(p)
-        item_analyze_src(p)
         if p.is_file():
             calltree.clear_item()
             calltree.tree_insert_item(p,"")        
+
+    def item_analyze_src(p):
+        if p.is_file():
+            with open(p,encoding=srcEncoding) as fh:
+                contents = fh.read()
+                entrySec,retdict = cobol_src_analyze(contents)
+
+            treeview2.clear_item()
+            calldict.clear()
+
+            if entrySec:
+                calldict.update(retdict)
+                treeview2.tree.tag_configure("perform",foreground="violet")
+                treeview2.tree.tag_configure("call",foreground="orange")
+                treeview2.tree_insert_item(PerformItem(entrySec,None,None),"")
+
+    def calltree_select_item(e):
+        p = calltree.tree_focus()
+        print(f"{p}")
+        item_view_src(p)
+        item_analyze_src(p)
         
+
     def item_view_src(p):
         if p.is_file():
             with open(p,encoding=srcEncoding) as fh:
@@ -457,19 +476,6 @@ def main():
                 cobol_syntax_highlight(srcview.text,contents)                
                 # srcview.text.config(state='disabled')
         
-    def item_analyze_src(p):
-        if p.is_file():
-            with open(p,encoding=srcEncoding) as fh:
-                contents = fh.read()
-                entrySec,retdict = cobol_src_analyze(contents)
-
-            treeview2.clear_item()
-            calldict.clear()
-            calldict.update(retdict)
-    
-            treeview2.tree.tag_configure("perform",foreground="violet")
-            treeview2.tree.tag_configure("call",foreground="orange")
-            treeview2.tree_insert_item(PerformItem(entrySec,None,None),"")
 
     def tree_select_item2(e):
         p = treeview2.tree_focus()
@@ -501,13 +507,12 @@ def main():
     
     treeview.tree.bind("<Double-1>",event_printer)
     treeview.tree.bind("<<TreeviewSelect>>",tree_select_item)
+    calltree.tree.bind("<<TreeviewSelect>>",calltree_select_item)
     treeview2.tree.bind("<<TreeviewSelect>>",tree_select_item2)
-
 
     def show_dialog(e):
         show_dialog_func(e,root,srcview)
     
-        
     srcview.text.bind("<Button-1>",event_printer)
     srcview.text.bind("<Control-f>",show_dialog)
     srcview.text.bind("<Key>", lambda e: "break")
