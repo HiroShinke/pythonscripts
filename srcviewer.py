@@ -359,7 +359,68 @@ def show_dialog_func(e,root,srcview):
     
     # frame.grab_set()
 
+def views_for_src(paned):
 
+
+    class Model:
+
+        def __init__(self):
+            self.calldict = {}
+            
+        def get_item(self,p):
+            match p:
+                case PerformItem():
+                    tag = "perform"
+                case CallItem():
+                    tag = "call"
+                case _:
+                    tag = None
+            return dict(text = p.name, tag  = tag )
+
+        def get_children(self,p):
+            return self.calldict.get(p.name,[])
+
+    performmodel = Model()
+
+    treeview2 = ModelTreeview(paned,
+                              get_item=performmodel.get_item,
+                              get_children=performmodel.get_children)
+    srcview = SrcView(paned)
+
+
+    def event_printer(*args):
+        print(f"{args}")
+        print(f"{treeview2.tree.focus()}")
+        
+    def tree_select_item2(e):
+        p = treeview2.tree_focus()
+        print(f"p = {p}")
+        match p:
+            case PerformItem(name,s,e) if s is not None:
+                srcview.text.config(state='normal')
+                srcview.text.tag_remove("sel","1.0","end")
+                srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
+                srcview.text.see(f"1.0 +{s}c")
+                # srcview.text.config(state='disabled')                
+            case CallItem(name,s,e) if s is not None:
+                srcview.text.config(state='normal')
+                srcview.text.tag_remove("sel","1.0","end")
+                srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
+                srcview.text.see(f"1.0 +{s}c")
+                # srcview.text.config(state='disabled')                
+
+
+    def show_dialog(e):
+        show_dialog_func(e,root,srcview)
+
+    srcview.text.bind("<Control-f>",show_dialog)
+    treeview2.tree.bind("<<TreeviewSelect>>",tree_select_item2)
+    srcview.text.bind("<Button-1>",event_printer)
+    srcview.text.bind("<Key>", lambda e: "break")
+    
+    return performmodel,treeview2,srcview
+
+                
 def main():
 
     parser = argparse.ArgumentParser()
@@ -406,32 +467,15 @@ def main():
     
     calltree = ModelTreeview(paned,get_item=get_item,get_children=get_callee)
     paned.add(calltree)
-    
-    calldict = {}
-    
-    def get_item2(p):
-        match p:
-            case PerformItem():
-                tag = "perform"
-            case CallItem():
-                tag = "call"
-            case _:
-                tag = None
-        return dict(text = p.name, tag  = tag )
 
-    def get_children2(p):
-        return calldict.get(p.name,[])
-    
-    treeview2 = ModelTreeview(paned,get_item=get_item2,get_children=get_children2)
+    performmodel,treeview2,srcview = views_for_src(paned)
     paned.add(treeview2)
-
-    srcview = SrcView(paned)
     paned.add(srcview)
 
     def event_printer(*args):
         print(f"{args}")
         print(f"{treeview.tree.focus()}")
-        
+
     def refresh_tree():
         if filename := fd.askdirectory(title="Open Directory",initialdir="/"):
             p = Path(filename)
@@ -450,10 +494,10 @@ def main():
                 entrySec,retdict = cobol_src_analyze(contents)
 
             treeview2.clear_item()
-            calldict.clear()
+            performmodel.calldict.clear()
 
             if entrySec:
-                calldict.update(retdict)
+                performmodel.calldict.update(retdict)
                 treeview2.tree.tag_configure("perform",foreground="violet")
                 treeview2.tree.tag_configure("call",foreground="orange")
                 treeview2.tree_insert_item(PerformItem(entrySec,None,None),"")
@@ -475,26 +519,7 @@ def main():
                 # syntax_highlight(srcview.text,contents)
                 cobol_syntax_highlight(srcview.text,contents)                
                 # srcview.text.config(state='disabled')
-        
-
-    def tree_select_item2(e):
-        p = treeview2.tree_focus()
-        print(f"p = {p}")
-        match p:
-            case PerformItem(name,s,e) if s is not None:
-                srcview.text.config(state='normal')
-                srcview.text.tag_remove("sel","1.0","end")
-                srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
-                srcview.text.see(f"1.0 +{s}c")
-                # srcview.text.config(state='disabled')                
-            case CallItem(name,s,e) if s is not None:
-                srcview.text.config(state='normal')
-                srcview.text.tag_remove("sel","1.0","end")
-                srcview.text.tag_add("sel",f"1.0 +{s}c",f"1.0 +{e}c")
-                srcview.text.see(f"1.0 +{s}c")
-                # srcview.text.config(state='disabled')                
-
-
+    
     paned.grid(row=0,column=0,columnspan=4,sticky=tk.N+tk.S+tk.E+tk.W)
     button1 = ttk.Button(root,text="Reload...",command=refresh_tree)
     button1.grid(row=1,column=2,sticky=tk.W+tk.E)
@@ -508,15 +533,7 @@ def main():
     treeview.tree.bind("<Double-1>",event_printer)
     treeview.tree.bind("<<TreeviewSelect>>",tree_select_item)
     calltree.tree.bind("<<TreeviewSelect>>",calltree_select_item)
-    treeview2.tree.bind("<<TreeviewSelect>>",tree_select_item2)
 
-    def show_dialog(e):
-        show_dialog_func(e,root,srcview)
-    
-    srcview.text.bind("<Button-1>",event_printer)
-    srcview.text.bind("<Control-f>",show_dialog)
-    srcview.text.bind("<Key>", lambda e: "break")
-    
     menubar = tk.Menu(root)
     file_menu = tk.Menu(menubar, tearoff=False)
     file_menu.add_command(label="Open new file...", command=refresh_tree)
