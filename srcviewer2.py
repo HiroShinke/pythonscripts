@@ -424,11 +424,12 @@ def make_src_window(root,p,srcEncoding=None):
 
     toplevel = tk.Toplevel(root)
     paned = tk.PanedWindow(toplevel)
-    paned.pack()
-    
+    paned.grid(row=0, column=0, sticky=tk.N+tk.W+tk.S+tk.E)
     performmodel,performtree,srcview = views_for_src(paned)
     paned.add(performtree)
     paned.add(srcview)
+    toplevel.rowconfigure(0,weight=1)
+    toplevel.columnconfigure(0,weight=1)
     
     def item_analyze_src(p):
         if p.is_file():
@@ -458,6 +459,8 @@ def make_src_window(root,p,srcEncoding=None):
 
     item_analyze_src(p)
     item_view_src(p)
+
+    return toplevel
     
 
 def main():
@@ -472,8 +475,9 @@ def main():
     includeDir = Path(args.incdir if args.incdir else ".")
     
     root = tk.Tk()
+
     paned = tk.PanedWindow(root)
-    root.title("Simple Source browser")
+    root.title("MSource browser")
 
     def get_item(p): return dict( text = p.name )
     def get_children(p): return p.iterdir() if p.is_dir() else None
@@ -507,6 +511,11 @@ def main():
     calltree = ModelTreeview(paned,get_item=get_item,get_children=get_callee)
     paned.add(calltree)
 
+    h = root.winfo_screenheight()
+    # w = root.winfo_width()
+    w = 400
+    root.geometry(f"{w}x{h}+0+0")
+    
     def event_printer(*args):
         print(f"{args}")
         print(f"{treeview.tree.focus()}")
@@ -522,12 +531,30 @@ def main():
             calltree.clear_item()
             calltree.tree_insert_item(p,"")        
 
-    def calltree_select_item(e):
+    srcwindow_list = []
+
+    def srcview_rearrange():
+        window_num = len(srcwindow_list)
+        x = root.winfo_width()
+        sw = root.winfo_screenwidth()
+        sh = root.winfo_screenheight()
+        dh  = sh // window_num
+        w = sw - x
+        y = 0        
+
+        for win in srcwindow_list:
+            win.geometry(f"{w}x{dh}+{x}+{y}")
+            y += dh
+
+    def calltree_select_item():
         p = calltree.tree_focus()
         print(f"{p}")
-        make_src_window(root,p,srcEncoding=srcEncoding)
+        win = make_src_window(root,p,srcEncoding=srcEncoding)
+        srcwindow_list.append(win)
+        srcview_rearrange()
 
-    calltree.tree.bind("<<TreeviewSelect>>",calltree_select_item)        
+        
+    # calltree.tree.bind("<<TreeviewSelect>>",calltree_select_item)        
     
     paned.grid(row=0,column=0,columnspan=4,sticky=tk.N+tk.S+tk.E+tk.W)
     button1 = ttk.Button(root,text="Reload...",command=refresh_tree)
@@ -546,6 +573,8 @@ def main():
     menubar = tk.Menu(root)
     file_menu = tk.Menu(menubar, tearoff=False)
     file_menu.add_command(label="Open new file...", command=refresh_tree)
+    file_menu.add_command(label="Open Src", command=calltree_select_item)
+    file_menu.add_command(label="Rearrange Srcview windows", command=srcview_rearrange)
     file_menu.add_command(label="Quit", command=root.destroy)
     menubar.add_cascade(label="File", menu = file_menu)
     root.config(menu = menubar)
