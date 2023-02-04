@@ -520,8 +520,7 @@ def main():
     print(f"root.winfo_screenheight = {root.winfo_screenheight()}")
     
     def event_printer(*args):
-        print(f"{args}")
-        print(f"{treeview.tree.focus()}")
+        print(f"event_printer = {args}")
 
     def refresh_tree():
         if filename := fd.askdirectory(title="Open Directory",initialdir="/"):
@@ -557,7 +556,18 @@ def main():
         
         for win in srcwindow_list:
             win.geometry(f"{w}x{dh}+{x}+{y}")
-            y += dh + 2 * titlebar_height
+            y += dh + 3 * titlebar_height
+
+        print_hierarchy(root)
+            
+
+    def print_hierarchy(w, depth=0):
+        print('  '*depth,
+              f"{w.winfo_class()} w={w.winfo_width()} h={w.winfo_height()} "
+              f"x={w.winfo_x()} y={w.winfo_y()}"
+              f"rootx={w.winfo_rootx()} rooty={w.winfo_rooty()}")
+        for i in w.winfo_children():
+            print_hierarchy(i, depth+1)
 
     def calltree_select_item():
         p = calltree.tree_focus()
@@ -565,6 +575,12 @@ def main():
         win = make_src_window(root,p,srcEncoding=srcEncoding)
         srcwindow_list.append(win)
         srcview_rearrange()
+
+        def destroy_func():
+            srcwindow_list.remove(win)
+            win.destroy()
+        
+        win.protocol("WM_DELETE_WINDOW",destroy_func)
 
         
     # calltree.tree.bind("<<TreeviewSelect>>",calltree_select_item)        
