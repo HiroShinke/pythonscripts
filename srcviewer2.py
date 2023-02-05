@@ -539,33 +539,29 @@ def main():
         
         window_num = len(srcwindow_list)
         titlebar_height = root.winfo_rooty() - root.winfo_y()
-        border_width    = root.winfo_rootx() - root.winfo_x()        
-        x = root.winfo_width()
-        rh = root.winfo_height()        
+        rh = root.winfo_height()
+        rw = root.winfo_width()
         sw = root.winfo_screenwidth()
         sh = root.winfo_screenheight()
-        dh  = sh // window_num - 2 * titlebar_height
-        w = sw - x
+        dh  = (rh + titlebar_height) // window_num - titlebar_height
+        w = sw - rw
         y = 0        
 
-        print(f"titlebar_height = {titlebar_height}")
-        print(f"titlebar_height = {titlebar_height}")
-        print(f"rh = {rh}")
-        print(f"sh = {sh}")
-        print(f"dh = {dh}")
-        
         for win in srcwindow_list:
-            win.geometry(f"{w}x{dh}+{x}+{y}")
-            y += dh + 3 * titlebar_height
+            win.geometry(f"{w}x{dh}+{rw}+{y}")
+            y += dh + titlebar_height + 24
 
+        print(f"screenw={sw},screenh={sh}")
         print_hierarchy(root)
             
 
     def print_hierarchy(w, depth=0):
         print('  '*depth,
               f"{w.winfo_class()} w={w.winfo_width()} h={w.winfo_height()} "
-              f"x={w.winfo_x()} y={w.winfo_y()}"
-              f"rootx={w.winfo_rootx()} rooty={w.winfo_rooty()}")
+              f"reqw={w.winfo_reqwidth()} reqh={w.winfo_reqheight()} "
+              f"x={w.winfo_x()} y={w.winfo_y()} "
+              f"rootx={w.winfo_rootx()} rooty={w.winfo_rooty()} "
+              f"geometry={w.winfo_geometry()}")
         for i in w.winfo_children():
             print_hierarchy(i, depth+1)
 
