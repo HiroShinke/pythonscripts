@@ -534,7 +534,8 @@ def main():
             calltree.tree_insert_item(p,"")        
 
     srcwindow_list = []
-
+    srcview_dict = {}
+    
     def srcview_rearrange():
         
         window_num = len(srcwindow_list)
@@ -565,19 +566,23 @@ def main():
         for i in w.winfo_children():
             print_hierarchy(i, depth+1)
 
+            
     def calltree_select_item():
         p = calltree.tree_focus()
         print(f"{p}")
-        win = make_src_window(root,p,srcEncoding=srcEncoding)
-        srcwindow_list.append(win)
+
+        if p not in srcview_dict:
+            win = make_src_window(root,p,srcEncoding=srcEncoding)
+            srcwindow_list.append(win)
+            srcview_dict[p] = win
+            def destroy_func():
+                srcwindow_list.remove(win)
+                srcview_dict.pop(p,None)
+                win.destroy()
+
+            win.protocol("WM_DELETE_WINDOW",destroy_func)
+
         srcview_rearrange()
-
-        def destroy_func():
-            srcwindow_list.remove(win)
-            win.destroy()
-        
-        win.protocol("WM_DELETE_WINDOW",destroy_func)
-
         
     # calltree.tree.bind("<<TreeviewSelect>>",calltree_select_item)        
     
