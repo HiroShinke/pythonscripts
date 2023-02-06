@@ -201,26 +201,38 @@ def cobol_src_analyze(contents):
     return (entrySec,perform_dict)
 
 
-def cobol_syntax_highlight(text,contents):
+def cobol_syntax_highlight(text,contents,process_open_link=None):
 
     text.tag_configure("comment",foreground="violet")
     text.tag_configure("keyword",foreground="pink")
     text.tag_configure("literal",foreground="blue")    
     text.tag_configure("callname",foreground="orange")
+    text.tag_configure("copysentence",foreground="orange")    
     text.tag_configure("section",foreground="orange")
     
-    def open_link(e):
+    def open_link(name,e):
         print(f"text button : event = {e}")
         position = f"@{e.x},{e.y} +1c"
         index = text.index(position)
-        prevrange = text.tag_prevrange("callname",index)
+        prevrange = text.tag_prevrange(name,index)
         callname = text.get(*prevrange)
-        print(f"literal = {callname}")
+        print(f"callee = {callname}")
+        if process_open_link and callname:
+            process_open_link("name",callname)
 
-    text.tag_bind("callname","<Button-1>",open_link)
+    def open_link_func(name):
+        def helper(e): open_link(name,e)
+        return helper
+            
+    text.tag_bind("callname","<Button-1>",open_link_func("callname"))
     text.tag_bind("callname", "<Enter>", lambda _: text.config(cursor="hand2"))
     text.tag_bind("callname", "<Leave>", lambda _: text.config(cursor=""))    
-                  
+
+    text.tag_bind("copysentence","<Button-1>",open_link_func("copysentence",))
+    text.tag_bind("copysentence", "<Enter>", lambda _: text.config(cursor="hand2"))
+    text.tag_bind("copysentence", "<Leave>", lambda _: text.config(cursor=""))    
+
+    
     lines = contents.splitlines()
 
     pat = re.compile(r"^.{6}\*.*")
@@ -230,6 +242,7 @@ def cobol_syntax_highlight(text,contents):
         ("division", r"(\S+)\s+DIVISION(?!\w)"),
         ("section",r"(\S+)\s+SECTION\s*\."),
         ("callname",  r"""(?<!\w)CALL\s+["']([^"']+)['"]"""),
+        ("copysentence",  r"""(?<!\w)COPY\s+["']([^"']+)['"]"""),        
         ("keyword", r"(?<=\s)(COPY|MOVE|ADD|IF|WHEN|EVALUATE|GO|TO)(?=\s)")
     ]
     line_pat = '|'.join(f'(?P<{p}>{pat})'
@@ -249,7 +262,7 @@ def cobol_syntax_highlight(text,contents):
             tokentype = m.lastgroup
             word = m.group(m.lastindex + 1)
             # print(f"{tokentype},{word}")
-            start0,end0 = m.span(tokentype)
+            start0,end0 = m.span(m.lastindex + 1)
             start = start0 + pos
             end   = end0 + pos
             if tokentype == "division":
@@ -267,6 +280,8 @@ def cobol_syntax_highlight(text,contents):
                     pass
             elif tokentype == "callname":
                 text.tag_add("callname",f"1.0 +{start}c",f"1.0 +{end}c")
+            elif tokentype == "copysentence":
+                text.tag_add("copysentence",f"1.0 +{start}c",f"1.0 +{end}c")
 
         pos += len(l) + 1
 
@@ -420,7 +435,7 @@ def views_for_src(paned):
     
     return performmodel,treeview2,srcview
 
-def make_src_window(root,p,srcEncoding=None):
+def make_src_window(root,p,srcEncoding=None,process_open_link=None):
 
     toplevel = tk.Toplevel(root)
     paned = tk.PanedWindow(toplevel)
@@ -430,7 +445,8 @@ def make_src_window(root,p,srcEncoding=None):
     paned.add(srcview)
     toplevel.rowconfigure(0,weight=1)
     toplevel.columnconfigure(0,weight=1)
-    
+
+
     def item_analyze_src(p):
         if p.is_file():
             with open(p,encoding=srcEncoding) as fh:
@@ -454,7 +470,9 @@ def make_src_window(root,p,srcEncoding=None):
                 srcview.text.delete("1.0","end -1c")
                 srcview.text.insert("1.0",contents)
                 # syntax_highlight(srcview.text,contents)
-                cobol_syntax_highlight(srcview.text,contents)                
+                cobol_syntax_highlight(srcview.text,
+                                       contents,
+                                       process_open_link=process_open_link)
                 # srcview.text.config(state='disabled')
 
     item_analyze_src(p)
@@ -567,24 +585,36 @@ def main():
             print_hierarchy(i, depth+1)
 
             
-    def calltree_select_item():
+    def calltree_create_srcview():
         p = calltree.tree_focus()
         print(f"{p}")
+        create_srcview(p)
 
+    def process_open_link(type,name):
+
+        name = re.sub(r"\....$","",name,re.I)
+        
+        if p := includedir_find(targetDir,name):
+            create_srcview(p)
+        elif p := includedir_find(includeDir,name):
+            create_srcview(p)
+
+    def create_srcview(p):
+        
         if p not in srcview_dict:
-            win = make_src_window(root,p,srcEncoding=srcEncoding)
+            win = make_src_window(root,p,
+                                  srcEncoding=srcEncoding,
+                                  process_open_link=process_open_link)
             srcwindow_list.append(win)
             srcview_dict[p] = win
             def destroy_func():
                 srcwindow_list.remove(win)
                 srcview_dict.pop(p,None)
                 win.destroy()
-
             win.protocol("WM_DELETE_WINDOW",destroy_func)
 
         srcview_rearrange()
-        
-    # calltree.tree.bind("<<TreeviewSelect>>",calltree_select_item)        
+
     
     paned.grid(row=0,column=0,columnspan=4,sticky=tk.N+tk.S+tk.E+tk.W)
     button1 = ttk.Button(root,text="Reload...",command=refresh_tree)
@@ -603,7 +633,7 @@ def main():
     menubar = tk.Menu(root)
     file_menu = tk.Menu(menubar, tearoff=False)
     file_menu.add_command(label="Open new file...", command=refresh_tree)
-    file_menu.add_command(label="Open Src", command=calltree_select_item)
+    file_menu.add_command(label="Open Src", command=calltree_create_srcview)
     file_menu.add_command(label="Rearrange Srcview windows", command=srcview_rearrange)
     file_menu.add_command(label="Quit", command=root.destroy)
     menubar.add_cascade(label="File", menu = file_menu)
