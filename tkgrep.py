@@ -12,7 +12,7 @@ def do_grep(fp,proc):
     elif fp.is_dir():
         do_grepdir(fp,proc)
     else:
-        print(f"uncomparable {fp}",file=of)
+        print(f"uncomparable {fp}")
     
 def do_grepfile(f,proc):
     proc(f)
