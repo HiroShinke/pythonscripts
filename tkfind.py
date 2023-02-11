@@ -20,7 +20,7 @@ def main():
     tmpfile = pathsToTempfile(topf)
     
     root = tk.Tk()
-    root.title("tkgrep.py")
+    root.title("tkfind.py")
     
     fromString = tk.StringVar()
     patString  = tk.StringVar()
