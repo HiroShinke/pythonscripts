@@ -67,34 +67,30 @@ def main():
 
     def get_prev_height(text,num_goback=1):
 
-        prev_height = -4        
         while True:
             idx = lfuncv.index(f"insert -{num_goback}l linestart")
-            prevline = lfuncv.get(f"insert -{num_goback}l linestart",f"insert -{num_goback}l lineend")
+            prevline = lfuncv.get(f"insert -{num_goback}l linestart",
+                                  f"insert -{num_goback}l lineend")
             if m := re.search(r"\S",prevline):
-                prev_height,_ = m.span()
-                break
+                s,_ = m.span()
+                return s
             elif idx == "1.0":
                 break
             num_goback += 1
 
-        return prev_height
+        return None
         
     def tab_event(e):
 
-        print(f"event = {e}")
-        print(f"state = {e.state}")
-
         prev_height = get_prev_height(lfuncv)
-
         s = current_indent(lfuncv)
-        c = current_linepos(lfuncv)
+        l,c = location_linepos(lfuncv,"insert")
 
         if c < s:
             lfuncv.mark_set("insert",f"insert linestart +{s}c")
         else:
             r = int(s)%4
-            if s < prev_height + 4:
+            if prev_height is not None and s < prev_height + 4:
                 lfuncv.insert("insert linestart"," "*(4-r))
             else:
                 lfuncv.delete("insert linestart",f"insert linestart +{s}c")
@@ -109,24 +105,34 @@ def main():
             s = 0
         return s
 
-    def current_linepos(text):
-        pos = text.index("insert")
+    def location_linepos(text,location):
+        pos = text.index(location)
         if m := re.search(r"(\d+)\.(\d+)",pos):
             l,c= map(lambda x: int(x), m.groups())
-            return c
+            return l,c
         else:
-            assert False, "something wrong"
+            return None
     
     def return_event(e):
 
-        print(f"event = {e}")
-        print(f"state = {e.state}")
-
         prev_height = get_prev_height(lfuncv,0)
-        text = lfuncv.get("insert","insert lineend")
-        lfuncv.delete("insert","insert lineend")        
-        lfuncv.insert("insert +1l linestart"," "*prev_height + text + "\n")
-        lfuncv.mark_set("insert",f"insert +1l linestart +{prev_height}c")
+        prev_height = 0 if prev_height is None else prev_height
+        s = current_indent(lfuncv)
+        l,c = location_linepos(lfuncv,"insert")
+
+        print(f"prev_height={prev_height}")
+
+        if c <= s:
+            lfuncv.insert("insert linestart","\n")
+            if s < prev_height:
+                lfuncv.insert("insert linestart"," "*(prev_height-s))
+            lfuncv.mark_set("insert",f"insert linestart +{prev_height}c")           
+        else:
+            text = lfuncv.get("insert","insert lineend")
+            lfuncv.delete("insert","insert lineend")            
+            lfuncv.insert("insert +1l linestart"," "*prev_height + text + "\n")
+            lfuncv.mark_set("insert",f"insert +1l linestart +{prev_height}c")
+
         return "break"
     
     lfuncv.bind("<Tab>",tab_event)
