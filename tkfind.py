@@ -65,10 +65,9 @@ def main():
     lfiv.grid(column=1,row=4, columnspan=3, sticky=tk.N+tk.S+tk.E+tk.W)
 
 
-    def get_prev_height(text):
+    def get_prev_height(text,num_goback=1):
 
         prev_height = -4        
-        num_goback = 1
         while True:
             idx = lfuncv.index(f"insert -{num_goback}l linestart")
             prevline = lfuncv.get(f"insert -{num_goback}l linestart",f"insert -{num_goback}l lineend")
@@ -87,16 +86,9 @@ def main():
         print(f"state = {e.state}")
 
         prev_height = get_prev_height(lfuncv)
-        
-        line = lfuncv.get("insert linestart","insert lineend")
-        if m := re.search(r"^\s*",line):
-            _,s = m.span()
-        else:
-            s = 0
 
-        pos = lfuncv.index("insert")
-        if m := re.search(r"(\d+)\.(\d+)",pos):
-            l,c= map(lambda x: int(x), m.groups())
+        s = current_indent(lfuncv)
+        c = current_linepos(lfuncv)
 
         if c < s:
             lfuncv.mark_set("insert",f"insert linestart +{s}c")
@@ -109,8 +101,36 @@ def main():
 
         return "break"
 
+    def current_indent(text):
+        line = text.get("insert linestart","insert lineend")
+        if m := re.search(r"^\s*",line):
+            _,s = m.span()
+        else:
+            s = 0
+        return s
+
+    def current_linepos(text):
+        pos = text.index("insert")
+        if m := re.search(r"(\d+)\.(\d+)",pos):
+            l,c= map(lambda x: int(x), m.groups())
+            return c
+        else:
+            assert False, "something wrong"
+    
+    def return_event(e):
+
+        print(f"event = {e}")
+        print(f"state = {e.state}")
+
+        prev_height = get_prev_height(lfuncv,0)
+        text = lfuncv.get("insert","insert lineend")
+        lfuncv.delete("insert","insert lineend")        
+        lfuncv.insert("insert +1l linestart"," "*prev_height + text + "\n")
+        lfuncv.mark_set("insert",f"insert +1l linestart +{prev_height}c")
+        return "break"
     
     lfuncv.bind("<Tab>",tab_event)
+    lfuncv.bind("<Return>",return_event)    
     
     def call_do_grep():
 
