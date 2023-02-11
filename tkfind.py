@@ -65,7 +65,7 @@ def main():
     lfiv.grid(column=1,row=4, columnspan=3, sticky=tk.N+tk.S+tk.E+tk.W)
 
 
-    def get_prev_height(text,num_goback=1):
+    def prev_indent(text,num_goback=1):
 
         while True:
             idx = lfuncv.index(f"insert -{num_goback}l linestart")
@@ -73,7 +73,8 @@ def main():
                                   f"insert -{num_goback}l lineend")
             if m := re.search(r"\S",prevline):
                 s,_ = m.span()
-                return s
+                delta = 4 if re.search(r":$",prevline) else 0
+                return (s+delta)
             elif idx == "1.0":
                 break
             num_goback += 1
@@ -82,7 +83,7 @@ def main():
         
     def tab_event(e):
 
-        prev_height = get_prev_height(lfuncv)
+        prev_height = prev_indent(lfuncv)
         s = current_indent(lfuncv)
         l,c = location_linepos(lfuncv,"insert")
 
@@ -90,7 +91,7 @@ def main():
             lfuncv.mark_set("insert",f"insert linestart +{s}c")
         else:
             r = int(s)%4
-            if prev_height is not None and s < prev_height + 4:
+            if prev_height is not None and s < prev_height:
                 lfuncv.insert("insert linestart"," "*(4-r))
             else:
                 lfuncv.delete("insert linestart",f"insert linestart +{s}c")
@@ -115,12 +116,10 @@ def main():
     
     def return_event(e):
 
-        prev_height = get_prev_height(lfuncv,0)
+        prev_height = prev_indent(lfuncv,0)
         prev_height = 0 if prev_height is None else prev_height
         s = current_indent(lfuncv)
         l,c = location_linepos(lfuncv,"insert")
-
-        print(f"prev_height={prev_height}")
 
         if c <= s:
             lfuncv.insert("insert linestart","\n")
@@ -129,7 +128,8 @@ def main():
             lfuncv.mark_set("insert",f"insert linestart +{prev_height}c")           
         else:
             text = lfuncv.get("insert","insert lineend")
-            lfuncv.delete("insert","insert lineend")            
+            lfuncv.delete("insert","insert lineend")
+            prev_height = prev_indent(lfuncv,0)
             lfuncv.insert("insert +1l linestart"," "*prev_height + text + "\n")
             lfuncv.mark_set("insert",f"insert +1l linestart +{prev_height}c")
 
