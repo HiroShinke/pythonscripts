@@ -64,9 +64,8 @@ def main():
     lfi.grid(column=0,row=4)
     lfiv.grid(column=1,row=4, columnspan=3, sticky=tk.N+tk.S+tk.E+tk.W)
 
-    def tab_event(e):
-        print(f"event = {e}")
-        print(f"state = {e.state}")
+
+    def get_prev_height(text):
 
         prev_height = -4        
         num_goback = 1
@@ -76,9 +75,18 @@ def main():
             if m := re.search(r"\S",prevline):
                 prev_height,_ = m.span()
                 break
-            elif idx = "1.0"
+            elif idx == "1.0":
                 break
             num_goback += 1
+
+        return prev_height
+        
+    def tab_event(e):
+
+        print(f"event = {e}")
+        print(f"state = {e.state}")
+
+        prev_height = get_prev_height(lfuncv)
         
         line = lfuncv.get("insert linestart","insert lineend")
         if m := re.search(r"^\s*",line):
