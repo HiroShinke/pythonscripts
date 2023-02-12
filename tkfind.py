@@ -14,6 +14,101 @@ def do_rec_file(fp,proc):
         for c in fp.iterdir():
             do_rec_file(c,proc)
 
+
+class PyEditText(tk.Text):
+
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.bind("<Tab>",self.tab_event)
+        self.bind("<Return>",self.return_event)
+
+    def prev_indent(self,num_goback=1):
+
+        while True:
+            idx = self.index(f"insert -{num_goback}l linestart")
+            prevline = self.get(f"insert -{num_goback}l linestart",
+                                  f"insert -{num_goback}l lineend")
+            if m := re.search(r"\S",prevline):
+                s,_ = m.span()
+                delta = 4 if re.search(r":$",prevline) else 0
+                return (s+delta)
+            elif idx == "1.0":
+                break
+            num_goback += 1
+
+        return None
+        
+    def tab_event(self,e):
+
+        prev_height = self.prev_indent()
+        s = self.current_indent()
+        l,c = self.location_linepos("insert")
+
+        if c < s:
+            self.mark_set("insert",f"insert linestart +{s}c")
+        else:
+            r = int(s)%4
+            if prev_height is not None and s < prev_height:
+                self.insert("insert linestart"," "*(4-r))
+            else:
+                self.delete("insert linestart",f"insert linestart +{s}c")
+
+        return "break"
+
+    def current_indent(self):
+        line = self.get("insert linestart","insert lineend")
+        if m := re.search(r"^\s*",line):
+            _,s = m.span()
+        else:
+            s = 0
+        return s
+
+    def location_linepos(self,location):
+        pos = self.index(location)
+        if m := re.search(r"(\d+)\.(\d+)",pos):
+            l,c= map(lambda x: int(x), m.groups())
+            return l,c
+        else:
+            return None
+    
+    def return_event(self,e):
+
+        prev_height = self.prev_indent(0)
+        prev_height = 0 if prev_height is None else prev_height
+        s = self.current_indent()
+        l,c = self.location_linepos("insert")
+
+        if c <= s:
+            self.insert("insert linestart","\n")
+            if s < prev_height:
+                self.insert("insert linestart"," "*(prev_height-s))
+            self.mark_set("insert",f"insert linestart +{prev_height}c")           
+        else:
+            text = self.get("insert","insert lineend")
+            self.delete("insert","insert lineend")
+            prev_height = self.prev_indent(0)
+            if self.compare("insert +1l linestart","==","end"):
+                # workaround the limitation of tk.Text insert command 
+                # (https://www.tcl.tk/man/tcl8.5/TkCmd/text.html#M105")
+                # pathName insert index chars ?tagList chars tagList ...?
+                #  Inserts all of the chars arguments just before the character at index.
+                #  If index refers to the end of the text
+                #  (the character after the last newline) then the new text is
+                #  inserted just before the last newline instead. "
+                self.insert("end","\n" + " "*prev_height + text)
+            else:
+                self.insert("insert +1l linestart"," "*prev_height + text + "\n")
+            self.mark_set("insert",f"insert +1l linestart +{prev_height}c")
+
+        return "break"
+
+    def print_event(e):
+         lastchar = self.get("end -1c")
+         print(f"lastchar = {list(lastchar)}")
+         lastindex = self.index("end")
+         print(f"lastindex = {lastindex}")            
+         last1index = self.index("end -1c")
+         print(f"last1index = {last1index}")            
             
 def main():
 
@@ -46,7 +141,7 @@ def main():
     ltb3 = ttk.Radiobutton(frm, text="dir" ,variable=typeString,value="d")
     lp=ttk.Label(frm, text="Pattan:")
     lfunc=ttk.Label(frm, text="Func:")
-    lfuncv = tk.Text(frm, width=80, height=5)
+    lfuncv = PyEditText(frm, width=80, height=5)
     lpv = ttk.Entry(frm, textvariable=patString)
 
     lfi=ttk.Label(frm, text="Result:")
@@ -73,99 +168,6 @@ def main():
     b1=ttk.Button(frm,text="File...",command=choose_file)
     b1.grid(column=3, row=4, columnspan=2, sticky=tk.N+tk.S+tk.E+tk.W)
     
-    def prev_indent(text,num_goback=1):
-
-        while True:
-            idx = lfuncv.index(f"insert -{num_goback}l linestart")
-            prevline = lfuncv.get(f"insert -{num_goback}l linestart",
-                                  f"insert -{num_goback}l lineend")
-            if m := re.search(r"\S",prevline):
-                s,_ = m.span()
-                delta = 4 if re.search(r":$",prevline) else 0
-                return (s+delta)
-            elif idx == "1.0":
-                break
-            num_goback += 1
-
-        return None
-        
-    def tab_event(e):
-
-        prev_height = prev_indent(lfuncv)
-        s = current_indent(lfuncv)
-        l,c = location_linepos(lfuncv,"insert")
-
-        if c < s:
-            lfuncv.mark_set("insert",f"insert linestart +{s}c")
-        else:
-            r = int(s)%4
-            if prev_height is not None and s < prev_height:
-                lfuncv.insert("insert linestart"," "*(4-r))
-            else:
-                lfuncv.delete("insert linestart",f"insert linestart +{s}c")
-
-        return "break"
-
-    def current_indent(text):
-        line = text.get("insert linestart","insert lineend")
-        if m := re.search(r"^\s*",line):
-            _,s = m.span()
-        else:
-            s = 0
-        return s
-
-    def location_linepos(text,location):
-        pos = text.index(location)
-        if m := re.search(r"(\d+)\.(\d+)",pos):
-            l,c= map(lambda x: int(x), m.groups())
-            return l,c
-        else:
-            return None
-    
-    def return_event(e):
-
-        prev_height = prev_indent(lfuncv,0)
-        prev_height = 0 if prev_height is None else prev_height
-        s = current_indent(lfuncv)
-        l,c = location_linepos(lfuncv,"insert")
-
-        if c <= s:
-            lfuncv.insert("insert linestart","\n")
-            if s < prev_height:
-                lfuncv.insert("insert linestart"," "*(prev_height-s))
-            lfuncv.mark_set("insert",f"insert linestart +{prev_height}c")           
-        else:
-            text = lfuncv.get("insert","insert lineend")
-            lfuncv.delete("insert","insert lineend")
-            prev_height = prev_indent(lfuncv,0)
-            if lfuncv.compare("insert +1l linestart","==","end"):
-                # workaround the limitation of tk.Text insert command 
-                # (https://www.tcl.tk/man/tcl8.5/TkCmd/text.html#M105")
-                # pathName insert index chars ?tagList chars tagList ...?
-                #  Inserts all of the chars arguments just before the character at index.
-                #  If index refers to the end of the text
-                #  (the character after the last newline) then the new text is
-                #  inserted just before the last newline instead. "
-                lfuncv.insert("end","\n" + " "*prev_height + text)
-            else:
-                lfuncv.insert("insert +1l linestart"," "*prev_height + text + "\n")
-            lfuncv.mark_set("insert",f"insert +1l linestart +{prev_height}c")
-
-        return "break"
-
-    def print_event(e):
-         lastchar = lfuncv.get("end -1c")
-         print(f"lastchar = {list(lastchar)}")
-         lastindex = lfuncv.index("end")
-         print(f"lastindex = {lastindex}")            
-         last1index = lfuncv.index("end -1c")
-         print(f"last1index = {last1index}")            
-
-
-    lfuncv.bind("<Tab>",tab_event)
-    lfuncv.bind("<Return>",return_event)
-    # lfuncv.bind("<Key>",print_event)
-    # lfuncv.bind("<Enter>",print_event)
     
     def call_do_grep():
 
