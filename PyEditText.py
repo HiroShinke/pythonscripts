@@ -129,3 +129,15 @@ class PyEditText(tk.Text):
          last1index = self.index("end -1c")
          print(f"last1index = {last1index}")            
             
+
+if __name__ == "__main__":
+    
+    root = tk.Tk()
+    root.title("PyEditText test")
+    
+    text=PyEditText(root)
+    text.pack(expand=True,fill=tk.BOTH)
+
+    root.mainloop()
+
+    
