@@ -640,7 +640,13 @@ def main():
     root.config(menu = menubar)
 
     treeview.tree_insert_item(targetDir,"")
-            
+
+    def create_context_menu(e):
+        file_menu.post(e.x_root,e.y_root)
+    
+    calltree.tree.bind("<Button-2>",create_context_menu)
+
+    
     root.mainloop()
 
 
