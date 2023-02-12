@@ -21,6 +21,7 @@ class PyEditText(tk.Text):
         super().__init__(*args,**kwargs)
         self.bind("<Tab>",self.tab_event)
         self.bind("<Return>",self.return_event)
+        self.bind("<Key>",self.syntax_highlight)
 
     def prev_indent(self,num_goback=1):
 
@@ -102,6 +103,34 @@ class PyEditText(tk.Text):
 
         return "break"
 
+    def syntax_highlight(self,e):
+
+        self.tag_configure("keyword",foreground="orange")
+        self.tag_configure("func",foreground="violet")
+        self.tag_configure("literal",foreground="violet")    
+        self.tag_configure("funcname",foreground="blue")
+        self.tag_configure("lhs",foreground="orange")
+        
+        token_specification = [
+            ("keyword", r"(?<!\w)(def|class|for|from|if|in|while)(?!\w)"),
+            ("func",r"(?<!\w)(print|len|open|write)(?!\w)"),
+            ("literal",r'"[^"]+"'),
+            ("funcname",r"(?<=def)\s+\w+"),
+            ("lhs",r"\w+(?=\s+=)")
+        ]
+        
+        token_pat = '|'.join(f'(?P<{p}>{pat})'
+                             for p,pat in token_specification)
+        expre = re.compile(token_pat)
+        
+        contents = self.get("1.0","end")
+
+        for m in expre.finditer(contents):
+            token_type = m.lastgroup            
+            start,end = m.span(token_type)
+            self.tag_add(token_type,f"1.0 +{start}c",f"1.0 +{end}c")
+
+    
     def print_event(e):
          lastchar = self.get("end -1c")
          print(f"lastchar = {list(lastchar)}")
