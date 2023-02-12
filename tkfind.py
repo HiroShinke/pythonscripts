@@ -4,6 +4,7 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
+import tkinter.filedialog as fd
 import re
 
 def do_rec_file(fp,proc):
@@ -50,7 +51,13 @@ def main():
 
     lfi=ttk.Label(frm, text="Result:")
     lfiv = ttk.Entry(frm, width=80, textvariable=fileString)
-    
+
+    def choose_file():
+        if filename := fd.askopenfilename(title="Open Directory",
+                                          filetypes=[("","*")],
+                                          initialdir="/"):
+            fileString.set(filename)
+        
     lf.grid(column=0, row=0)
     lfv.grid(column=1, row=0, columnspan=3, sticky=tk.N+tk.S+tk.E+tk.W)
     lt.grid(column=0, row=1)
@@ -62,9 +69,10 @@ def main():
     lfunc.grid(column=0,row=3)
     lfuncv.grid(column=1,row=3, columnspan=3, sticky=tk.N+tk.S+tk.E+tk.W)
     lfi.grid(column=0,row=4)
-    lfiv.grid(column=1,row=4, columnspan=3, sticky=tk.N+tk.S+tk.E+tk.W)
-
-
+    lfiv.grid(column=1,row=4, columnspan=2, sticky=tk.N+tk.S+tk.E+tk.W)
+    b1=ttk.Button(frm,text="File...",command=choose_file)
+    b1.grid(column=3, row=4, columnspan=2, sticky=tk.N+tk.S+tk.E+tk.W)
+    
     def prev_indent(text,num_goback=1):
 
         while True:
@@ -130,13 +138,34 @@ def main():
             text = lfuncv.get("insert","insert lineend")
             lfuncv.delete("insert","insert lineend")
             prev_height = prev_indent(lfuncv,0)
-            lfuncv.insert("insert +1l linestart"," "*prev_height + text + "\n")
+            if lfuncv.compare("insert +1l linestart","==","end"):
+                # workaround the limitation of tk.Text insert command 
+                # (https://www.tcl.tk/man/tcl8.5/TkCmd/text.html#M105")
+                # pathName insert index chars ?tagList chars tagList ...?
+                #  Inserts all of the chars arguments just before the character at index.
+                #  If index refers to the end of the text
+                #  (the character after the last newline) then the new text is
+                #  inserted just before the last newline instead. "
+                lfuncv.insert("end","\n" + " "*prev_height + text)
+            else:
+                lfuncv.insert("insert +1l linestart"," "*prev_height + text + "\n")
             lfuncv.mark_set("insert",f"insert +1l linestart +{prev_height}c")
 
         return "break"
-    
+
+    def print_event(e):
+         lastchar = lfuncv.get("end -1c")
+         print(f"lastchar = {list(lastchar)}")
+         lastindex = lfuncv.index("end")
+         print(f"lastindex = {lastindex}")            
+         last1index = lfuncv.index("end -1c")
+         print(f"last1index = {last1index}")            
+
+
     lfuncv.bind("<Tab>",tab_event)
-    lfuncv.bind("<Return>",return_event)    
+    lfuncv.bind("<Return>",return_event)
+    # lfuncv.bind("<Key>",print_event)
+    # lfuncv.bind("<Enter>",print_event)
     
     def call_do_grep():
 
@@ -181,8 +210,8 @@ def main():
     b3=ttk.Button(frm, text="Quit", command=root.destroy)
 
     # b1.grid(column=2, row=2, sticky=tk.N+tk.S+tk.E+tk.W)
-    b2.grid(column=2, row=4, sticky=tk.N+tk.S+tk.E+tk.W)
-    b3.grid(column=3, row=4, sticky=tk.N+tk.S+tk.E+tk.W)
+    b2.grid(column=2, row=5, sticky=tk.N+tk.S+tk.E+tk.W)
+    b3.grid(column=3, row=5, sticky=tk.N+tk.S+tk.E+tk.W)
     frm.columnconfigure(1,weight=1)
     frm.columnconfigure(2,weight=1)
     frm.columnconfigure(3,weight=1)
