@@ -47,23 +47,27 @@ def call_do_grep(top,patStr,type,functext=None,callback=None):
     with concurrent.futures.ProcessPoolExecutor(
             max_workers = os.cpu_count()-1) as executor:
         
-        while True:
+        DONE = False
 
-            futures = set()
+        while not DONE:
+
             if que.empty():
                 break
 
+            futures = set()
+            
             try:                
                 while fp := que.get(False):
                     count_processing += 1
                     fut = executor.submit(do_rec_file,fp,que)
                     futures.add(fut)
                     if callback(count_processing,count_done):
-                        executor.shutdown()
                         print(f"executor.shutdown() future count = {len(futures)}")
+                        executor.shutdown()                            
                         for fut in futures:
                             print(f"{fut} cancled")
                             fut.cancel()
+                        DONE = True
                         break
             except queue.Empty:
                 pass

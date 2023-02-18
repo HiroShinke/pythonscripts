@@ -23,15 +23,13 @@ def main():
     patString  = tk.StringVar()
     fileString = tk.StringVar()
     typeString = tk.StringVar()
-    fileCountString = tk.StringVar()
-    doneCountString = tk.StringVar()
+    countString = tk.StringVar()
     
     fromString.set(topf)
     patString.set("")
     fileString.set(tmpfile)
     typeString.set("")
-    fileCountString.set("0")
-    doneCountString.set("0")
+    countString.set("Count: 0/0")
     
     frm = ttk.Frame(root, padding=10)
     frm.grid(column=0,row=0,sticky=tk.N+tk.S+tk.E+tk.W)
@@ -87,8 +85,7 @@ def main():
                 return WORK_CANCELED
         else:
             with LOCK:
-                fileCountString.set(f"{count_proc}")
-                doneCountString.set(f"{count_done}")
+                countString.set(f"Count: {count_proc}/{count_done}")
                 return WORK_CANCELED                
 
     def call_do_grep():
@@ -110,13 +107,10 @@ def main():
                 WORK_CANCELED = True
 
 
-    lfc = ttk.Label(frm, textvariable=fileCountString)
-    ldc = ttk.Label(frm, textvariable=doneCountString)
+    lfc = ttk.Label(frm, textvariable=countString)
     b2=ttk.Button(frm,text="Execute",command=call_do_grep)
     b3=ttk.Button(frm, text="Quit", command=root.destroy)
-    # b1.grid(column=2, row=2, sticky=tk.N+tk.S+tk.E+tk.W)
-    lfc.grid(column=0, row=5,sticky=tk.N+tk.S+tk.E+tk.W)
-    ldc.grid(column=1, row=5,sticky=tk.N+tk.S+tk.E+tk.W)
+    lfc.grid(column=1, row=5,sticky=tk.N+tk.S+tk.E+tk.W)
     b2.grid(column=2, row=5, sticky=tk.N+tk.S+tk.E+tk.W)
     b3.grid(column=3, row=5, sticky=tk.N+tk.S+tk.E+tk.W)
     frm.columnconfigure(1,weight=1)
