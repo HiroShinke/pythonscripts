@@ -65,7 +65,6 @@ def call_do_grep(top,patStr,type,functext=None,callback=None):
                         print(f"executor.shutdown() future count = {len(futures)}")
                         executor.shutdown()                            
                         for fut in futures:
-                            print(f"{fut} cancled")
                             fut.cancel()
                         DONE = True
                         break
