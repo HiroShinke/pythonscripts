@@ -85,7 +85,8 @@ def main():
                 return WORK_CANCELED
         else:
             with LOCK:
-                countString.set(f"Count: {count_proc}/{count_done}")
+                if not WORK_CANCELED:
+                    countString.set(f"Count: {count_proc}/{count_done}")
                 return WORK_CANCELED                
 
     def call_do_grep():
