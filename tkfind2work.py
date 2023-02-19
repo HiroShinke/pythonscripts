@@ -8,19 +8,7 @@ import queue
 import re
 
 
-def func(f,pat):
-    if f.is_file() and pat:
-        with open(f) as fh:
-            contents = fh.read()
-            lines = contents.splitlines()
-            for l in lines:
-                if pat.search(l):
-                    print(f"{f}: {l}")
-    else:
-        print(f"{f}")
-
-        
-def do_rec_file(fp,type,pat,queue):
+def do_rec_file(fp,type,patStr,linePatStr,functext,queue):
 
     if not type:
         def pred(f):
@@ -31,9 +19,34 @@ def do_rec_file(fp,type,pat,queue):
     elif type == "d":
         def pred(f):
             return f.is_dir()
+
+    if patStr:
+        pat = re.compile(patStr)
+    else:
+        pat = None
+
+    if linePatStr:
+        linePat = re.compile(linePatStr)
+    else:
+        linePat = None
+
+    if functext:
+        func = compileFuncObj(functext)
+    else:
+        def func(f):
+            if f.is_file() and linePat:
+                with open(f) as fh:
+                    contents = fh.read()
+                    lines = contents.splitlines()
+                    for l in lines:
+                        if linePat.search(l):
+                            print(f"{f}: {l}")
+            else:
+                print(f"{f}")
+
     try:
-        if pred(fp):
-            func(fp,pat)
+        if pred(fp) and ( not pat or pat.search(fp.name) ):
+            func(fp)
         if fp.is_dir():
             for c in fp.iterdir():
                 queue.put(c)
@@ -41,13 +54,10 @@ def do_rec_file(fp,type,pat,queue):
         print(f"{fp} {e}")
 
 
-def call_do_grep(top,patStr,type,functext=None,callback=None):
+def call_do_grep(top,patStr,linePatStr,type,
+                 functext=None,
+                 callback=None):
 
-    if patStr:
-        pat = re.compile(patStr)
-    else:
-        pat = None
-    
     of = sys.stdout
     que = mp.Manager().Queue()
     que.put(top)
@@ -58,9 +68,9 @@ def call_do_grep(top,patStr,type,functext=None,callback=None):
     with concurrent.futures.ProcessPoolExecutor(
             max_workers = os.cpu_count()-1) as executor:
         
-        DONE = False
+        done = False
 
-        while not DONE:
+        while not done:
 
             if que.empty():
                 break
@@ -70,14 +80,21 @@ def call_do_grep(top,patStr,type,functext=None,callback=None):
             try:                
                 while fp := que.get(False):
                     count_processing += 1
-                    fut = executor.submit(do_rec_file,fp,type,pat,que)
+                    fut = executor.submit(do_rec_file,
+                                          fp,
+                                          type,
+                                          patStr,
+                                          linePatStr,
+                                          functext,
+                                          que)
                     futures.add(fut)
                     if callback(count_processing,count_done):
-                        print(f"executor.shutdown() future count = {len(futures)}")
+                        print("executor.shutdown() "
+                              f"future count = {len(futures)}")
                         executor.shutdown()                            
                         for fut in futures:
                             fut.cancel()
-                        DONE = True
+                        done = True
                         break
             except queue.Empty:
                 pass
@@ -99,5 +116,5 @@ def compileFuncObj(text):
     l = dict()
     exec(text,globals(),l)
     if l:
-        return list(l.values())[0]
-
+        # return list(l.values())[0]
+        return l["filefunc"]
