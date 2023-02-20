@@ -25,11 +25,6 @@ def do_rec_file(fp,type,patStr,linePatStr,functext,queue):
     else:
         pat = None
 
-    if linePatStr:
-        linePat = re.compile(linePatStr)
-    else:
-        linePat = None
-
     if functext:
         _func = compileFuncObj(functext)
         if _func:
@@ -37,16 +32,23 @@ def do_rec_file(fp,type,patStr,linePatStr,functext,queue):
                 if f.is_file():
                     _func(f)
     if not func:
+        if linePatStr:
+            linePat = re.compile(linePatStr)
+        else:
+            linePat = None
+
+        if linePat:
+            def func(f):
+                if f.is_file():
+                    with open(f) as fh:
+                        contents = fh.read()
+                        lines = contents.splitlines()
+                        for l in lines:
+                            if linePat.search(l):
+                                print(f"{f}: {l}")
+    if not func:
         def func(f):
-            if f.is_file() and linePat:
-                with open(f) as fh:
-                    contents = fh.read()
-                    lines = contents.splitlines()
-                    for l in lines:
-                        if linePat.search(l):
-                            print(f"{f}: {l}")
-            else:
-                print(f"{f}")
+            print(f"{f}")
 
     try:
         if pred(fp) and ( not pat or pat.search(fp.name) ):
