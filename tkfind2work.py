@@ -31,8 +31,12 @@ def do_rec_file(fp,type,patStr,linePatStr,functext,queue):
         linePat = None
 
     if functext:
-        func = compileFuncObj(functext)
-    else:
+        _func = compileFuncObj(functext)
+        if _func:
+            def func(f):
+                if f.is_file():
+                    _func(f)
+    if not func:
         def func(f):
             if f.is_file() and linePat:
                 with open(f) as fh:
@@ -47,7 +51,7 @@ def do_rec_file(fp,type,patStr,linePatStr,functext,queue):
     try:
         if pred(fp) and ( not pat or pat.search(fp.name) ):
             func(fp)
-        if fp.is_dir():
+        if fp.is_dir() and fp.name != ".git":
             for c in fp.iterdir():
                 queue.put(c)
     except Exception as e:

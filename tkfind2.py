@@ -25,6 +25,7 @@ def main():
     fileString = tk.StringVar()
     typeString = tk.StringVar()
     countString = tk.StringVar()
+    pbval = tk.DoubleVar(value=00.0)
     
     fromString.set(topf)
     patString.set("")
@@ -57,6 +58,8 @@ def filefunc(p):
             if re.search("def ",l):
                 print(f"{p} {l}")
 """)
+    lfuncv.syntax_highlight(None)
+    
     lpv = ttk.Entry(frm, textvariable=patString)
     llpv = ttk.Entry(frm, textvariable=linePatString)
 
@@ -86,6 +89,15 @@ def filefunc(p):
     b1=ttk.Button(frm,text="File...",command=choose_file)
     b1.grid(column=3, row=5, columnspan=2, sticky=tk.N+tk.S+tk.E+tk.W)
 
+
+
+    pb = ttk.Progressbar(frm,
+                         orient=tk.HORIZONTAL,
+                         variable=pbval,
+                         maximum=1.0,
+                         mode='determinate')
+    pb.grid(row=7, column=1, columnspan=3,sticky=tk.N+tk.S+tk.E+tk.W)
+
     LOCK = threading.Lock()
     WORK_CANCELED = False
 
@@ -99,7 +111,8 @@ def filefunc(p):
                 WORK_CANCELED = False
                 return WORK_CANCELED
         else:
-            countString.set(f"Count: {count_proc}/{count_done}")                
+            countString.set(f"Count: {count_proc}/{count_done}")
+            pbval.set(0 if count_proc == 0 else count_done/count_proc)
             with LOCK:
                 return WORK_CANCELED                
 
