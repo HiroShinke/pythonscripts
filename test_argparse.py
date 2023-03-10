@@ -53,6 +53,20 @@ class ArgParseTests(unittest.TestCase):
         args = parser.parse_args(["-f"])
         self.assertEqual(True,args.form)
 
+
+    def test_nargs(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--form", "-f", nargs='*')
+        args = parser.parse_args("-f a b c".split())
+        self.assertEqual(["a","b","c"],args.form)
+
+    def test_nargs2(self):
+        def splitComma(s): return re.split(r",",s)        
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--form", "-f", type=splitComma, nargs='*')
+        args = parser.parse_args("-f a,A b,B c,C".split())
+        self.assertEqual([["a","A"],["b","B"],["c","C"]],args.form)
+        
     def test_shortoptions1(self):
         parser = argparse.ArgumentParser()
         parser.add_argument("-f", action="store_true")
