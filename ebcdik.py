@@ -31,15 +31,18 @@ class StreamReader(Codec,codecs.StreamReader):
 ### encodings module API
 @codecs.register
 def getregentry(name):
-    return codecs.CodecInfo(
-        name='ebcdik',
-        encode=Codec().encode,
-        decode=Codec().decode,
-        incrementalencoder=IncrementalEncoder,
-        incrementaldecoder=IncrementalDecoder,
-        streamreader=StreamReader,
-        streamwriter=StreamWriter,
-    )
+    if name == 'ebcdik':
+        return codecs.CodecInfo(
+            name='ebcdik',
+            encode=Codec().encode,
+            decode=Codec().decode,
+            incrementalencoder=IncrementalEncoder,
+            incrementaldecoder=IncrementalDecoder,
+            streamreader=StreamReader,
+            streamwriter=StreamWriter,
+        )
+    else:
+        return None
 
 # mapping table for ebcdik to jis8
 ebcdik_table = [
