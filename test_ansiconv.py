@@ -1,6 +1,5 @@
 
 
-
 import unittest
 from ansiconv import *
 import io
