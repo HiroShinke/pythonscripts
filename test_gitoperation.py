@@ -17,6 +17,9 @@ def cmd_stdout(cmdstr):
                        check=True)
     return p.stdout
 
+def cmd_stdout_s(cmdstr):
+    return cmd_stdout(cmdstr).decode("cp932")
+
 def make_file(p,contents):
     with open(p,"w") as fh:
         fh.write(contents)
@@ -91,12 +94,266 @@ class GitTest(unittest.TestCase):
         self.assertEqual(b'100644 3b18e512dba79e4c8300dd08aeb37f8e728b8dad 0\thello.txt\n',
                          ret3)
 
+    def test_remote1(self):
+        make_file("hello.txt","hello world")
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m "add hello.txt" hello.txt')
+        
+        os.chdir(DIR_ORG)
+        if os.path.exists("testgitdir2"):
+            shutil.rmtree("testgitdir2")
+        cmd_stdout("cp -r testgitdir testgitdir2")
+        
+        os.chdir("testgitdir2")
+        cmd_stdout("git remote add first ../testgitdir")
+        ret = cmd_stdout("git remote")
+        self.assertEqual(b"first\n",ret)
+        cmd_stdout("git remote update first")
+        ret = cmd_stdout("git branch -a")
+        self.assertEqual(b'* master\n' + 
+                         b'  remotes/first/master\n',
+                         ret)
+        
+        os.chdir("../testgitdir")
+        make_file("hello1.txt","hello world")
+        cmd_stdout("git add hello1.txt")
+        ret = cmd_stdout('git commit -m "add hello1.txt" hello1.txt')
+        
+        os.chdir("../testgitdir2")
+        cmd_stdout("git remote update")
+        cmd_stdout("git merge first/master")
+        ret = cmd_stdout("ls")
+        self.assertEqual(b'hello.txt\nhello1.txt\n',ret)
+
+    def test_remote2(self):
+        make_file("hello.txt","hello world")
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m "add hello.txt" hello.txt')
+        
+        os.chdir(DIR_ORG)
+        if os.path.exists("testgitdir2"):
+            shutil.rmtree("testgitdir2")
+        cmd_stdout("cp -r testgitdir testgitdir2")
+        
+        os.chdir("testgitdir2")
+        cmd_stdout("git remote add first ../testgitdir")
+        ret = cmd_stdout("git remote")
+        self.assertEqual(b"first\n",ret)
+        cmd_stdout("git remote update first")
+        ret = cmd_stdout("git branch -a")
+        self.assertEqual(b'* master\n' + 
+                         b'  remotes/first/master\n',
+                         ret)
+        
+        os.chdir("../testgitdir")
+        make_file("hello1.txt","hello world")
+        cmd_stdout("git add hello1.txt")
+        ret = cmd_stdout('git commit -m "add hello1.txt" hello1.txt')
+        
+        os.chdir("../testgitdir2")
+        cmd_stdout("git pull first master")
+        ret = cmd_stdout("ls")
+        self.assertEqual(b'hello.txt\nhello1.txt\n',ret)
 
 
+    def test_remote2_2(self):
+        make_file("hello.txt","hello world")
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m "add hello.txt" hello.txt')
+        
+        os.chdir(DIR_ORG)
+        if os.path.exists("testgitdir2"):
+            shutil.rmtree("testgitdir2")
+        cmd_stdout("cp -r testgitdir testgitdir2")
+        
+        os.chdir("testgitdir2")
+        cmd_stdout("git remote add first ../testgitdir")
+        ret = cmd_stdout("git remote")
+        self.assertEqual(b"first\n",ret)
+        cmd_stdout("git remote update first")
+        ret = cmd_stdout("git branch -a")
+        self.assertEqual(b'* master\n' + 
+                         b'  remotes/first/master\n',
+                         ret)
+        cmd_stdout("git branch --set-upstream-to=first/master master")
+        
+        os.chdir("../testgitdir")
+        make_file("hello1.txt","hello world")
+        cmd_stdout("git add hello1.txt")
+        ret = cmd_stdout('git commit -m "add hello1.txt" hello1.txt')
+        
+        os.chdir("../testgitdir2")
+        cmd_stdout("git pull")
+        ret = cmd_stdout("ls")
+        self.assertEqual(b'hello.txt\nhello1.txt\n',ret)
 
 
+    def test_remote3(self):
+        make_file("hello.txt","hello world")
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m "add hello.txt" hello.txt')
+        
+        os.chdir(DIR_ORG)
+        if os.path.exists("testgitdir2"):
+            shutil.rmtree("testgitdir2")
+        cmd_stdout("cp -r testgitdir testgitdir2")
+        
+        os.chdir("testgitdir2")
+        cmd_stdout("git remote add first ../testgitdir")
+        ret = cmd_stdout("git remote")
+        self.assertEqual(b"first\n",ret)
+        cmd_stdout("git remote update first")
+        ret = cmd_stdout("git branch -a")
+        self.assertEqual(b'* master\n' + 
+                         b'  remotes/first/master\n',
+                         ret)
+        
+        os.chdir("../testgitdir")
+        make_file("hello1.txt","hello world")
+        cmd_stdout("git add hello1.txt")
+        ret = cmd_stdout('git commit -m "add hello1.txt" hello1.txt')
+        
+        os.chdir("../testgitdir2")
+        cmd_stdout("git pull first master")
+        ret = cmd_stdout("ls")
+        self.assertEqual(b'hello.txt\nhello1.txt\n',ret)
+        
+        make_file("hello2.txt","hello world2")
+        cmd_stdout("git add hello2.txt")
+        ret = cmd_stdout('git commit -m "add hello2.txt" hello2.txt')
+        
+        os.chdir("../testgitdir")
+
+        cmd_stdout("git remote add second ../testgitdir2")
+        ret = cmd_stdout("git remote")
+        self.assertEqual(b"second\n",ret)
+        cmd_stdout("git remote update second")
+        ret = cmd_stdout("git branch -a")
+        self.assertEqual(b'* master\n' + 
+                         b'  remotes/second/master\n',
+                         ret)
+
+        cmd_stdout("git pull second master")
+        ret = cmd_stdout_s("ls")
+        self.assertEqual("""\
+hello.txt
+hello1.txt
+hello2.txt
+"""
+                         ,ret)
 
 
+    def test_push1(self):
+
+        os.chdir(DIR_ORG)
+        if os.path.exists("testgitdir.git"): shutil.rmtree("testgitdir.git")
+        if os.path.exists("testgitdir2"): shutil.rmtree("testgitdir2")
+        if os.path.exists("testgitdir3"): shutil.rmtree("testgitdir3")
+            
+        cmd_stdout("git clone --bare testgitdir testgitdir.git")
+        cmd_stdout("git clone testgitdir.git testgitdir2")
+        cmd_stdout("git clone testgitdir.git testgitdir3")
+
+        os.chdir("testgitdir2")
+        make_file("hello1.txt","hello world")
+        cmd_stdout("git add hello1.txt")
+        cmd_stdout('git commit -m "add hello1.txt" hello1.txt')
+        cmd_stdout("git push origin")
+
+        os.chdir("../testgitdir3")
+        cmd_stdout("git pull origin master")
+        ret = cmd_stdout_s("ls")
+        self.assertEqual("""\
+hello1.txt
+"""
+                         ,ret)
+
+    def test_push2(self):
+
+        os.chdir(DIR_ORG)
+        if os.path.exists("testgitdir.git"): shutil.rmtree("testgitdir.git")
+        if os.path.exists("testgitdir2"): shutil.rmtree("testgitdir2")
+        if os.path.exists("testgitdir3"): shutil.rmtree("testgitdir3")
+            
+        cmd_stdout("git clone --bare testgitdir testgitdir.git")
+        cmd_stdout("git clone testgitdir.git testgitdir2")
+        cmd_stdout("git clone testgitdir.git testgitdir3")
+
+        os.chdir("testgitdir2")
+        make_file("hello1.txt","hello world\n")
+        cmd_stdout("git add hello1.txt")
+        cmd_stdout('git commit -m "add hello1.txt" hello1.txt')
+        make_file("hello1.txt","hello world\nhello world, again\n")
+        cmd_stdout("git push origin")
+
+        cmd_stdout("git checkout -b new-topic")
+        cmd_stdout("git add hello1.txt")
+        cmd_stdout('git commit -m "add hello1.txt" hello1.txt')        
+        cmd_stdout("git push origin new-topic")
+
+        os.chdir("../testgitdir3")
+        cmd_stdout("git fetch origin")
+        cmd_stdout("git checkout --track -b new-topic origin/new-topic")
+        ret = cmd_stdout_s("git diff HEAD~1 HEAD")
+        self.assertEqual("""\
+diff --git a/hello1.txt b/hello1.txt
+index 3b18e51..b652454 100644
+--- a/hello1.txt
++++ b/hello1.txt
+@@ -1 +1,2 @@
+ hello world
++hello world, again
+"""
+              ,ret)
+
+        cmd_stdout("git checkout master")
+        cmd_stdout("git merge new-topic")
+        cmd_stdout("git push origin master")
+
+        os.chdir("../testgitdir2")
+        cmd_stdout("git pull origin master")
+        ret = cmd_stdout_s("git diff HEAD~1 HEAD")
+        self.assertEqual("""\
+diff --git a/hello1.txt b/hello1.txt
+index 3b18e51..b652454 100644
+--- a/hello1.txt
++++ b/hello1.txt
+@@ -1 +1,2 @@
+ hello world
++hello world, again
+"""
+                         ,ret)
+
+        os.chdir("../testgitdir3")
+        ret = cmd_stdout_s("git branch -a")
+        self.assertEqual("""\
+* master
+  new-topic
+  remotes/origin/master
+  remotes/origin/new-topic
+"""
+              ,ret)
+        cmd_stdout("git branch -d new-topic")
+        cmd_stdout("git push origin --delete new-topic")
+        ret = cmd_stdout_s("git branch -a")
+        self.assertEqual("""\
+* master
+  remotes/origin/master
+"""
+              ,ret)
+
+
+        os.chdir("../testgitdir2")
+        cmd_stdout("git checkout master")        
+        cmd_stdout_s("git pull origin master")
+        cmd_stdout("git fetch --prune origin")
+        cmd_stdout("git branch -d new-topic")
+        ret = cmd_stdout_s("git branch -a")        
+        self.assertEqual("""\
+* master
+  remotes/origin/master
+"""
+              ,ret)
         
 if __name__ == "__main__":
     unittest.main()
