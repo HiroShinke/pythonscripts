@@ -32,10 +32,13 @@ def hexdigest(path,type=None):
             m.update(b"\x00")
         m.update(contents)
     return m.hexdigest()
-        
+
+DIR_ORG = os.path.abspath(".")
+
 class GitTest(unittest.TestCase):
 
     def setUp(self):
+        os.chdir(DIR_ORG)
         if os.path.exists("testgitdir"):
             shutil.rmtree("testgitdir")
         os.mkdir("testgitdir")
