@@ -94,6 +94,111 @@ class GitTest(unittest.TestCase):
         self.assertEqual(b'100644 3b18e512dba79e4c8300dd08aeb37f8e728b8dad 0\thello.txt\n',
                          ret3)
 
+
+    def test_merge1(self):
+
+        os.environ["GIT_AUTHOR_DATE"] = "Fri May 5 20:30:55 2023 +0900"
+        os.environ["GIT_COMMITTER_DATE"] = "Fri May 5 20:30:55 2023 +0900"
+        
+        make_file("hello.txt","""\
+hello, world
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m A')
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m B')
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby america
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m C')
+
+        ret = cmd_stdout_s("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+
+        cmd_stdout_s("git checkout -b new-topic")
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby europe
+goodby america
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m D')
+
+        ret = cmd_stdout_s("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* 967e46b D
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+        
+        cmd_stdout_s("git checkout master")
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby america
+goodby africa
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m F')
+
+        ret = cmd_stdout_s("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* 65baea3 F
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+
+        cmd_stdout("git merge new-topic")
+
+        ret = cmd_stdout_s("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+*   2108e11 Merge branch 'new-topic'
+|\  
+| * 967e46b D
+* | 65baea3 F
+|/  
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+
+        ret = cmd_stdout_s("git show-branch")
+        self.assertEqual("""\
+* [master] Merge branch 'new-topic'
+ ! [new-topic] D
+--
+-  [master] Merge branch 'new-topic'
+*+ [new-topic] D
+"""
+                         ,ret)
+        
     def test_remote1(self):
         make_file("hello.txt","hello world")
         cmd_stdout("git add hello.txt")
