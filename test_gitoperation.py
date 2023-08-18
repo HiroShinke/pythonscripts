@@ -21,6 +21,8 @@ def cmd_stdout(cmdstr):
     return cmd_stdout_b(cmdstr).decode("cp932")
 
 def make_file(p,contents):
+    if dir := os.path.dirname(p):
+        os.makedirs(dir, exist_ok = True)
     with open(p,"w") as fh:
         fh.write(contents)
 
