@@ -9,7 +9,7 @@ import re
 import hashlib
 from datetime import datetime
 
-def cmd_stdout(cmdstr):
+def cmd_stdout_b(cmdstr):
     p = subprocess.run(cmdstr,
                        shell=True,
                        stdout=subprocess.PIPE,
@@ -17,8 +17,8 @@ def cmd_stdout(cmdstr):
                        check=True)
     return p.stdout
 
-def cmd_stdout_s(cmdstr):
-    return cmd_stdout(cmdstr).decode("cp932")
+def cmd_stdout(cmdstr):
+    return cmd_stdout_b(cmdstr).decode("cp932")
 
 def make_file(p,contents):
     with open(p,"w") as fh:
@@ -54,26 +54,26 @@ class GitTest(unittest.TestCase):
         make_file("hello.txt","hello world")
         cmd_stdout("git add hello.txt")
         ret = cmd_stdout("git status")
-        self.assertTrue(re.search(b"No commits yet",ret))
+        self.assertTrue(re.search("No commits yet",ret))
 
     def test_basec2(self):
         make_file("hello.txt","hello world")
         cmd_stdout("git add hello.txt")
         cmd_stdout('git commit -m "add hello.txt" hello.txt')
         ret = cmd_stdout("git status")
-        self.assertTrue( re.search(b"nothing to commit, working tree clean",ret) )
+        self.assertTrue( re.search("nothing to commit, working tree clean",ret) )
 
     def test_basec3(self):
         make_file("hello.txt","hello world\n")
         cmd_stdout("git add hello.txt")
         ret = cmd_stdout("git ls-files -s")
-        self.assertEqual(b'100644 3b18e512dba79e4c8300dd08aeb37f8e728b8dad 0\thello.txt\n',ret)
+        self.assertEqual('100644 3b18e512dba79e4c8300dd08aeb37f8e728b8dad 0\thello.txt\n',ret)
 
     def test_basec4(self):
         make_file("hello.txt","hello world\n")
         cmd_stdout("git add hello.txt")
         ret = cmd_stdout("git write-tree")
-        self.assertEqual(b'68aba62e560c0ebc3396e8ae9335232cd93a3f60\n',ret)
+        self.assertEqual('68aba62e560c0ebc3396e8ae9335232cd93a3f60\n',ret)
 
     def test_basec5(self):
         make_file("hello.txt","hello world\n")
@@ -85,13 +85,13 @@ class GitTest(unittest.TestCase):
         cmd_stdout("git add hello.txt")
         cmd_stdout("git write-tree")
         ret = cmd_stdout("git cat-file -p 3b18e5")
-        self.assertEqual(b"hello world\n",ret)
+        self.assertEqual("hello world\n",ret)
 
         ret2 = cmd_stdout("git cat-file -p 68aba6")
-        self.assertEqual(b'100644 blob 3b18e512dba79e4c8300dd08aeb37f8e728b8dad\thello.txt\n',
+        self.assertEqual('100644 blob 3b18e512dba79e4c8300dd08aeb37f8e728b8dad\thello.txt\n',
                          ret2)
         ret3 = cmd_stdout("git ls-files -s")
-        self.assertEqual(b'100644 3b18e512dba79e4c8300dd08aeb37f8e728b8dad 0\thello.txt\n',
+        self.assertEqual('100644 3b18e512dba79e4c8300dd08aeb37f8e728b8dad 0\thello.txt\n',
                          ret3)
 
 
@@ -124,7 +124,7 @@ goodby america
         cmd_stdout("git add hello.txt")
         cmd_stdout('git commit -m C')
 
-        ret = cmd_stdout_s("git log --graph --abbrev-commit --oneline")
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
         self.assertEqual("""\
 * 40c9072 C
 * b3db10b B
@@ -132,7 +132,7 @@ goodby america
 """
                          ,ret)
 
-        cmd_stdout_s("git checkout -b new-topic")
+        cmd_stdout("git checkout -b new-topic")
 
         make_file("hello.txt","""\
 hello, world
@@ -144,7 +144,7 @@ goodby america
         cmd_stdout("git add hello.txt")
         cmd_stdout('git commit -m D')
 
-        ret = cmd_stdout_s("git log --graph --abbrev-commit --oneline")
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
         self.assertEqual("""\
 * 967e46b D
 * 40c9072 C
@@ -153,7 +153,7 @@ goodby america
 """
                          ,ret)
         
-        cmd_stdout_s("git checkout master")
+        cmd_stdout("git checkout master")
 
         make_file("hello.txt","""\
 hello, world
@@ -165,7 +165,7 @@ goodby africa
         cmd_stdout("git add hello.txt")
         cmd_stdout('git commit -m F')
 
-        ret = cmd_stdout_s("git log --graph --abbrev-commit --oneline")
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
         self.assertEqual("""\
 * 65baea3 F
 * 40c9072 C
@@ -176,7 +176,7 @@ goodby africa
 
         cmd_stdout("git merge new-topic")
 
-        ret = cmd_stdout_s("git log --graph --abbrev-commit --oneline")
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
         self.assertEqual("""\
 *   2108e11 Merge branch 'new-topic'
 |\  
@@ -189,7 +189,7 @@ goodby africa
 """
                          ,ret)
 
-        ret = cmd_stdout_s("git show-branch")
+        ret = cmd_stdout("git show-branch")
         self.assertEqual("""\
 * [master] Merge branch 'new-topic'
  ! [new-topic] D
@@ -212,11 +212,11 @@ goodby africa
         os.chdir("testgitdir2")
         cmd_stdout("git remote add first ../testgitdir")
         ret = cmd_stdout("git remote")
-        self.assertEqual(b"first\n",ret)
+        self.assertEqual("first\n",ret)
         cmd_stdout("git remote update first")
         ret = cmd_stdout("git branch -a")
-        self.assertEqual(b'* master\n' + 
-                         b'  remotes/first/master\n',
+        self.assertEqual('* master\n' + 
+                         '  remotes/first/master\n',
                          ret)
         
         os.chdir("../testgitdir")
@@ -228,7 +228,7 @@ goodby africa
         cmd_stdout("git remote update")
         cmd_stdout("git merge first/master")
         ret = cmd_stdout("ls")
-        self.assertEqual(b'hello.txt\nhello1.txt\n',ret)
+        self.assertEqual('hello.txt\nhello1.txt\n',ret)
 
     def test_remote2(self):
         make_file("hello.txt","hello world")
@@ -243,11 +243,11 @@ goodby africa
         os.chdir("testgitdir2")
         cmd_stdout("git remote add first ../testgitdir")
         ret = cmd_stdout("git remote")
-        self.assertEqual(b"first\n",ret)
+        self.assertEqual("first\n",ret)
         cmd_stdout("git remote update first")
         ret = cmd_stdout("git branch -a")
-        self.assertEqual(b'* master\n' + 
-                         b'  remotes/first/master\n',
+        self.assertEqual('* master\n' + 
+                         '  remotes/first/master\n',
                          ret)
         
         os.chdir("../testgitdir")
@@ -258,7 +258,7 @@ goodby africa
         os.chdir("../testgitdir2")
         cmd_stdout("git pull first master")
         ret = cmd_stdout("ls")
-        self.assertEqual(b'hello.txt\nhello1.txt\n',ret)
+        self.assertEqual('hello.txt\nhello1.txt\n',ret)
 
 
     def test_remote2_2(self):
@@ -274,11 +274,11 @@ goodby africa
         os.chdir("testgitdir2")
         cmd_stdout("git remote add first ../testgitdir")
         ret = cmd_stdout("git remote")
-        self.assertEqual(b"first\n",ret)
+        self.assertEqual("first\n",ret)
         cmd_stdout("git remote update first")
         ret = cmd_stdout("git branch -a")
-        self.assertEqual(b'* master\n' + 
-                         b'  remotes/first/master\n',
+        self.assertEqual('* master\n' + 
+                         '  remotes/first/master\n',
                          ret)
         cmd_stdout("git branch --set-upstream-to=first/master master")
         
@@ -290,7 +290,7 @@ goodby africa
         os.chdir("../testgitdir2")
         cmd_stdout("git pull")
         ret = cmd_stdout("ls")
-        self.assertEqual(b'hello.txt\nhello1.txt\n',ret)
+        self.assertEqual('hello.txt\nhello1.txt\n',ret)
 
 
     def test_remote3(self):
@@ -306,11 +306,11 @@ goodby africa
         os.chdir("testgitdir2")
         cmd_stdout("git remote add first ../testgitdir")
         ret = cmd_stdout("git remote")
-        self.assertEqual(b"first\n",ret)
+        self.assertEqual("first\n",ret)
         cmd_stdout("git remote update first")
         ret = cmd_stdout("git branch -a")
-        self.assertEqual(b'* master\n' + 
-                         b'  remotes/first/master\n',
+        self.assertEqual('* master\n' + 
+                         '  remotes/first/master\n',
                          ret)
         
         os.chdir("../testgitdir")
@@ -321,7 +321,7 @@ goodby africa
         os.chdir("../testgitdir2")
         cmd_stdout("git pull first master")
         ret = cmd_stdout("ls")
-        self.assertEqual(b'hello.txt\nhello1.txt\n',ret)
+        self.assertEqual('hello.txt\nhello1.txt\n',ret)
         
         make_file("hello2.txt","hello world2")
         cmd_stdout("git add hello2.txt")
@@ -331,15 +331,15 @@ goodby africa
 
         cmd_stdout("git remote add second ../testgitdir2")
         ret = cmd_stdout("git remote")
-        self.assertEqual(b"second\n",ret)
+        self.assertEqual("second\n",ret)
         cmd_stdout("git remote update second")
         ret = cmd_stdout("git branch -a")
-        self.assertEqual(b'* master\n' + 
-                         b'  remotes/second/master\n',
+        self.assertEqual('* master\n' + 
+                         '  remotes/second/master\n',
                          ret)
 
         cmd_stdout("git pull second master")
-        ret = cmd_stdout_s("ls")
+        ret = cmd_stdout("ls")
         self.assertEqual("""\
 hello.txt
 hello1.txt
@@ -367,7 +367,7 @@ hello2.txt
 
         os.chdir("../testgitdir3")
         cmd_stdout("git pull origin master")
-        ret = cmd_stdout_s("ls")
+        ret = cmd_stdout("ls")
         self.assertEqual("""\
 hello1.txt
 """
@@ -399,7 +399,7 @@ hello1.txt
         os.chdir("../testgitdir3")
         cmd_stdout("git fetch origin")
         cmd_stdout("git checkout --track -b new-topic origin/new-topic")
-        ret = cmd_stdout_s("git diff HEAD~1 HEAD")
+        ret = cmd_stdout("git diff HEAD~1 HEAD")
         self.assertEqual("""\
 diff --git a/hello1.txt b/hello1.txt
 index 3b18e51..b652454 100644
@@ -417,7 +417,7 @@ index 3b18e51..b652454 100644
 
         os.chdir("../testgitdir2")
         cmd_stdout("git pull origin master")
-        ret = cmd_stdout_s("git diff HEAD~1 HEAD")
+        ret = cmd_stdout("git diff HEAD~1 HEAD")
         self.assertEqual("""\
 diff --git a/hello1.txt b/hello1.txt
 index 3b18e51..b652454 100644
@@ -430,7 +430,7 @@ index 3b18e51..b652454 100644
                          ,ret)
 
         os.chdir("../testgitdir3")
-        ret = cmd_stdout_s("git branch -a")
+        ret = cmd_stdout("git branch -a")
         self.assertEqual("""\
 * master
   new-topic
@@ -440,7 +440,7 @@ index 3b18e51..b652454 100644
               ,ret)
         cmd_stdout("git branch -d new-topic")
         cmd_stdout("git push origin --delete new-topic")
-        ret = cmd_stdout_s("git branch -a")
+        ret = cmd_stdout("git branch -a")
         self.assertEqual("""\
 * master
   remotes/origin/master
@@ -450,10 +450,10 @@ index 3b18e51..b652454 100644
 
         os.chdir("../testgitdir2")
         cmd_stdout("git checkout master")        
-        cmd_stdout_s("git pull origin master")
+        cmd_stdout("git pull origin master")
         cmd_stdout("git fetch --prune origin")
         cmd_stdout("git branch -d new-topic")
-        ret = cmd_stdout_s("git branch -a")        
+        ret = cmd_stdout("git branch -a")        
         self.assertEqual("""\
 * master
   remotes/origin/master
