@@ -17,8 +17,11 @@ def cmd_stdout_b(cmdstr):
                        check=True)
     return p.stdout
 
-def cmd_stdout(cmdstr):
-    return cmd_stdout_b(cmdstr).decode("cp932")
+def cmd_stdout(cmdstr,print_=False):
+    rets = cmd_stdout_b(cmdstr).decode("cp932")
+    if print_:
+        print(rets)
+    return rets
 
 def make_file(p,contents):
     if dir := os.path.dirname(p):
@@ -374,7 +377,7 @@ hello2.txt
 hello1.txt
 """
                          ,ret)
-
+        
     def test_push2(self):
 
         os.chdir(DIR_ORG)
@@ -461,6 +464,44 @@ index 3b18e51..b652454 100644
   remotes/origin/master
 """
               ,ret)
+
+
+    def test_sparse1(self):
+
+        os.chdir(DIR_ORG)
+        if os.path.exists("testgitdir.git"): shutil.rmtree("testgitdir.git")
+        if os.path.exists("testgitdir2"): shutil.rmtree("testgitdir2")
+        if os.path.exists("testgitdir3"): shutil.rmtree("testgitdir3")
+            
+        cmd_stdout("git clone --bare testgitdir testgitdir.git")
+        cmd_stdout("git clone testgitdir.git testgitdir2")
+
+        os.chdir("testgitdir2")
+        make_file("xxx/hello1.txt","hello world")
+        make_file("xxx/hello2.txt","hello world")        
+        make_file("goodbye1.txt","goodbye world")
+        make_file("goodbye2.txt","goodbye world")
+        cmd_stdout("git add *")
+        cmd_stdout('git commit -m "add all"')
+        cmd_stdout("git push origin")
+
+        os.mkdir("../testgitdir3")
+        os.chdir("../testgitdir3")
+        cmd_stdout("git init")
+        cmd_stdout("git config core.sparsecheckout true")
+        cmd_stdout("git remote add origin ../testgitdir.git")
+        make_file(".git/info/sparse-checkout","xxx\n")
+        cmd_stdout("git pull origin master")
+
+        self.assertEqual("xxx\n",cmd_stdout("ls"))
+        self.assertEqual("""\
+goodbye1.txt
+goodbye2.txt
+xxx/hello1.txt
+xxx/hello2.txt
+"""
+                         ,cmd_stdout("git ls-files"))
+
         
 if __name__ == "__main__":
     unittest.main()
