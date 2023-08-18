@@ -100,6 +100,33 @@ class GitTest(unittest.TestCase):
                          ret3)
 
 
+    def test_diff1(self):
+        make_file("hello1.txt","""\
+hello, world
+"""
+                  )
+        cmd_stdout('git add *')
+        cmd_stdout('git commit -m A')                  
+
+        make_file("hello1.txt","""\
+hello, world
+hello, japan
+"""
+                  )
+        make_file("hello2.txt","""\
+hello, world
+"""
+                  )
+        cmd_stdout('git add *')
+        cmd_stdout('git commit -m B')
+
+        self.assertEqual("""\
+hello1.txt
+hello2.txt
+"""
+                         ,cmd_stdout('git diff --name-only HEAD~1 HEAD'))
+                         
+
     def test_merge1(self):
 
         os.environ["GIT_AUTHOR_DATE"] = "Fri May 5 20:30:55 2023 +0900"
@@ -203,6 +230,179 @@ goodby africa
 *+ [new-topic] D
 """
                          ,ret)
+
+    def test_rebase1(self):
+
+        os.environ["GIT_AUTHOR_DATE"] = "Fri May 5 20:30:55 2023 +0900"
+        os.environ["GIT_COMMITTER_DATE"] = "Fri May 5 20:30:55 2023 +0900"
+        
+        make_file("hello.txt","""\
+hello, world
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m A')
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m B')
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby america
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m C')
+
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+
+        cmd_stdout("git checkout -b new-topic")
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby europe
+goodby america
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m D')
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby europe
+goodby america
+goodby world
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m E')
+        
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* 91ed2a5 E
+* 967e46b D
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+        
+        cmd_stdout("git checkout master")
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby america
+goodby africa
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m F')
+
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* 65baea3 F
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+        try:
+            cmd_stdout("git rebase new-topic")
+        except Exception as _:
+            pass
+
+        self.assertEqual("""\
+hello, world
+goodby japan
+goodby europe
+goodby america
+<<<<<<< HEAD
+goodby world
+=======
+goodby africa
+>>>>>>> 65baea3 (F)
+"""
+                         ,cmd_stdout("cat hello.txt"))
+
+        self.assertEqual("""\
+interactive rebase in progress; onto 91ed2a5
+Last command done (1 command done):
+   pick 65baea3 F
+No commands remaining.
+You are currently rebasing branch 'master' on '91ed2a5'.
+  (fix conflicts and then run "git rebase --continue")
+  (use "git rebase --skip" to skip this patch)
+  (use "git rebase --abort" to check out the original branch)
+
+Unmerged paths:
+  (use "git restore --staged <file>..." to unstage)
+  (use "git add <file>..." to mark resolution)
+	both modified:   hello.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+"""
+                         ,cmd_stdout("git status"))
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby europe
+goodby america
+goodby africa
+goodby world
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout("git commit -m \"F'\"")
+        cmd_stdout("git rebase --continue")
+        
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* e316ff3 F'
+* 91ed2a5 E
+* 967e46b D
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+
+        ret = cmd_stdout("git show-branch")
+        self.assertEqual("""\
+* [master] F'
+ ! [new-topic] E
+--
+*  [master] F'
+*+ [new-topic] E
+"""
+                         ,ret)
+
+        ret = cmd_stdout("cat hello.txt")
+        self.assertEqual("""\
+hello, world
+goodby japan
+goodby europe
+goodby america
+goodby africa
+goodby world
+"""
+                         ,ret)
+        
         
     def test_remote1(self):
         make_file("hello.txt","hello world")
