@@ -18,10 +18,15 @@ def cmd_stdout_b(cmdstr):
     return p.stdout
 
 def cmd_stdout(cmdstr,print_=False):
-    rets = cmd_stdout_b(cmdstr).decode("cp932")
-    if print_:
-        print(rets)
-    return rets
+    try:
+        rets = cmd_stdout_b(cmdstr).decode("cp932")
+        if print_:
+            print(rets)
+        return rets
+    except Exception as e:
+        if print_:
+            print(e.stdout.decode("cp932"))
+        raise e
 
 def make_file(p,contents):
     if dir := os.path.dirname(p):
@@ -321,10 +326,9 @@ goodby africa
 * 70809e4 A
 """
                          ,ret)
-        try:
+
+        with self.assertRaises(subprocess.SubprocessError) as cm:
             cmd_stdout("git rebase new-topic")
-        except Exception as _:
-            pass
 
         self.assertEqual("""\
 hello, world
