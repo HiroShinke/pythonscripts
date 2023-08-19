@@ -131,7 +131,163 @@ hello2.txt
 """
                          ,cmd_stdout('git diff --name-only HEAD~1 HEAD'))
                          
+    def test_checkout1(self):
 
+        os.environ["GIT_AUTHOR_DATE"] = "Fri May 5 20:30:55 2023 +0900"
+        os.environ["GIT_COMMITTER_DATE"] = "Fri May 5 20:30:55 2023 +0900"
+        
+        make_file("hello.txt","""\
+hello, world
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m A')
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m B')
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby america
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m C')
+
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+
+        cmd_stdout("git branch new-topic")
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby europe
+goodby america
+"""
+                  )
+        cmd_stdout("git checkout new-topic")
+
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m D')
+
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* 967e46b D
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+
+
+    def test_checkout2(self):
+
+        os.environ["GIT_AUTHOR_DATE"] = "Fri May 5 20:30:55 2023 +0900"
+        os.environ["GIT_COMMITTER_DATE"] = "Fri May 5 20:30:55 2023 +0900"
+        
+        make_file("hello.txt","""\
+hello, world
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m A')
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m B')
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby america
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m C')
+
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+
+        cmd_stdout("git checkout -b new-topic")
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goooby world
+goodby america
+"""
+                  )
+
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m E')
+
+        cmd_stdout("git checkout master")
+        
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby europe
+goodby america
+"""
+                  )
+        
+        cmd_stdout("git checkout -m new-topic")
+        self.assertEqual("""\
+hello, world
+goodby japan
+<<<<<<< new-topic
+goooby world
+=======
+goodby europe
+>>>>>>> local
+goodby america
+"""
+                         ,cmd_stdout("cat hello.txt"))
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby europe
+goooby world
+goodby america
+"""
+                  )
+
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m D')
+
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* 2a28b8c D
+* 1683878 E
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+
+        
     def test_merge1(self):
 
         os.environ["GIT_AUTHOR_DATE"] = "Fri May 5 20:30:55 2023 +0900"
