@@ -44,31 +44,28 @@ def main():
     root = tk.Tk()
     root.title("tkdiff.py")
     
-    fromString = tk.StringVar()
-    toString   = tk.StringVar()
-
-    fromString.set(topf)
-    toString.set(topt)
-    
     frm = ttk.Frame(root, padding=10)
     frm.grid(row=0, column=0, sticky=tk.N+tk.W+tk.S+tk.E)    
     root.columnconfigure(0,weight=1)
     root.rowconfigure(0,weight=1)
+
+    frm.columnconfigure(0,weight=0)
+    frm.columnconfigure(1,weight=1)
+    frm.columnconfigure(2,weight=1)
+    frm.rowconfigure(0,weight=1)
+    frm.rowconfigure(1,weight=3)
+    frm.rowconfigure(2,weight=0)
     
-    lf=ttk.Label(frm, text="From:")
-    lfv = ttk.Entry(frm, textvariable=fromString)
-    lt=ttk.Label(frm, text="To:")
-    ltv = ttk.Entry(frm, textvariable=toString)
+    lf= ttk.Label(frm, text="From:")
+    lfv = ContentsView(frm, width=80, height=5)
     lfunc=ttk.Label(frm, text="Func:")
-    lfuncv = ContentsView(frm, width=80, height=5)
+    lfuncv = ContentsView(frm, width=80, height=10)
     lfuncv.setContents("cat testgitdir2/xxx/hello1.txt")
     
     lf.grid(column=0, row=0)
     lfv.grid(column=1, row=0, columnspan=3, sticky="nsew")
-    lt.grid(column=0, row=1)
-    ltv.grid(column=1, row=1, columnspan=3, sticky="nsew")
-    lfunc.grid(column=0,row=2)
-    lfuncv.grid(column=1,row=2, columnspan=3, sticky="nsew")
+    lfunc.grid(column=0,row=1)
+    lfuncv.grid(column=1,row=1, columnspan=3, sticky="nsew")
 
     def cmd_stdout(cmdstr,print_=False):
         try:
@@ -105,18 +102,10 @@ def main():
     b3=ttk.Button(frm,text="ExecOut",command=exec_out)
     b4=ttk.Button(frm, text="Quit", command=root.destroy)
 
-    b2.grid(column=1, row=3, sticky="nsew")
-    b3.grid(column=2, row=3, sticky="nsew")
-    b4.grid(column=3, row=3, sticky="nsew")
+    b2.grid(column=1, row=2, sticky="nsew")
+    b3.grid(column=2, row=2, sticky="nsew")
+    b4.grid(column=3, row=2, sticky="nsew")
 
-    frm.columnconfigure(0,weight=0)
-    frm.columnconfigure(1,weight=1)
-    frm.columnconfigure(2,weight=1)
-    frm.columnconfigure(3,weight=1)
-    frm.rowconfigure(0,weight=1)
-    frm.rowconfigure(1,weight=1)
-    frm.rowconfigure(2,weight=1)
-    frm.rowconfigure(3,weight=0)
     
     root.mainloop()
     
