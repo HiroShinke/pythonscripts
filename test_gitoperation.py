@@ -475,6 +475,20 @@ goodby africa
             cmd_stdout("git merge new-topic")
 
         self.assertEqual("""\
+On branch master
+You have unmerged paths.
+  (fix conflicts and run "git commit")
+  (use "git merge --abort" to abort the merge)
+
+Unmerged paths:
+  (use "git add <file>..." to mark resolution)
+	both modified:   hello.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+"""
+                         ,cmd_stdout('git status'))
+        
+        self.assertEqual("""\
 hello, world
 goodby japan
 goodby america
