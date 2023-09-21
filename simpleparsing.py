@@ -9,16 +9,37 @@ SUCCESS = True
 FAILED  = False
 
 class Parser(abc.ABC):
-    
+
     @abc.abstractmethod
-    def parse(self,seq,i):
+    def parseImpl(self,seq,i):
         pass
+
+    def parse(self,seq,i):
+        if hasattr(self,"tag") and self.tag:
+            match self.parseImpl(seq,i):
+                case Success(v,j):
+                    return Success([self.tag,v],j)
+                case _ as fail:
+                    return fail
+        elif hasattr(self,"action") and self.action:
+            match self.parseImpl(seq,i):
+                case Success(v,j):
+                    return Success(self.action(v),j)
+                case _ as fail:
+                    return fail
+        else:
+            return self.parseImpl(seq,i)
+
+    def setTag(self,tag):
+        self.tag = tag
+        return self
 
     
 @dataclass
 class Success:
     value : any
     pos   : int
+    splicing : bool = False
 
 @dataclass
 class Failure:
@@ -28,7 +49,7 @@ class Failure:
 class Pred(Parser):
     def __init__(self,pred):
         self.pred = pred
-    def parse(self,s,i):
+    def parseImpl(self,s,i):
         if i < len(s) and self.pred(s[i]):
             return Success(s[i],i+1)
         else:
@@ -36,89 +57,110 @@ class Pred(Parser):
 
 class Seq(Parser):
 
-    def __init__(self,*parsers):
-        self.parsers = list(parsers)
+    def __init__(self,*parsers,splicing=False,**kwparsers):
+        if parsers and kwparsers:
+            raise ValueError(
+                "only all positional or all keyword parameters are possible"
+            )
+        if parsers:
+            self.parsers = list(parsers)
+        elif kwparsers:
+            self.parsers = dict(kwparsers)
 
-    def parse(self,s,i):
+        self.splicing = splicing
+
+    def parseImpl(self,s,i):
         ret = []
-        for p in self.parsers:
-            match p.parse(s,i):
-                case Success(v,j):
-                    ret.append(v)
-                    i = j
-                case _ as fail:
-                    return fail
-        return Success(ret,i)
+        if isinstance(self.parsers,list):
+            for p in self.parsers:
+                match p.parse(s,i):
+                    case Success(v,j):
+                        if self.splicing:
+                            ret.extend(v)
+                        else:
+                            ret.append(v)
+                        i = j
+                    case _ as fail:
+                        return fail
+            return Success(ret,i,self.splicing)
+        elif isinstance(self.parsers,dict):
+            for k,p in self.parsers.items():
+                match p.parse(s,i):
+                    case Success(v,j):
+                        ret.append([k,v])
+                        i = j
+                    case _ as fail:
+                        return fail
+            return Success(ret,i,self.splicing)
+
+def seqs(*parsers,**kwparsers):
+    return Seq(*parsers,splicing=True,**kwparsers)
+        
 
 class Or(Parser):
 
-    def __init__(self,*parsers):
-        self.parsers = list(parsers)
-        
-    def parse(self,s,i):
-        maxi = i
-        for p in self.parsers:
-            match p.parse(s,i):
-                case Success() as succ:
-                    return succ
-                case Failure(j):
-                    if maxi < j:
-                        maxi = j
-        return Failure(maxi)
+    def __init__(self,*parsers,**kwparsers):
+        if parsers and kwparsers:
+            raise ValueError(
+                "only all positional or all keyword parameters are possible"
+            )
+        if parsers:
+            self.parsers = list(parsers)
+        elif kwparsers:
+            self.parsers = dict(kwparsers)
 
-class TaggedOr(Parser):
-
-    def __init__(self,*kwparsers):
-        self.parsers = dict(kwparsers)
-        
-    def parse(self,s,i):
+    def parseImpl(self,s,i):
         maxi = i
-        for k,p in self.parsers.items():
-            match p.parse(s,i):
-                case Success(v,j):
-                    return Success([k,v],j)
-                case Failure(j):
-                    if maxi < j:
-                        maxi = j
+        if isinstance(self.parsers,list):
+            for p in self.parsers:
+                match p.parse(s,i):
+                    case Success() as succ:
+                        return succ
+                    case Failure(j):
+                        if maxi < j:
+                            maxi = j
+        elif isinstance(self.parsers,dict):
+            for k,p in self.parsers.items():
+                match p.parse(s,i):
+                    case Success(v,j):
+                        return Success([k,v],j)
+                    case Failure(j):
+                        if maxi < j:
+                            maxi = j
         return Failure(maxi)
     
     
-class Action(Parser):
-
-    def __init__(self,p,func):
-        self.p    = p
-        self.func = func
-
-    def parse(self,s,i):
-        match self.p.parse(s,i):
-            case Success(v,j):
-                return Success(self.func(v),j)
-            case _ as fail:
-                return fail
-
 class Many(Parser):
 
-    def __init__(self,p):
+    def __init__(self,p,splicing=False):
         self.p    = p
+        self.splicing = splicing
 
-    def parse(self,s,i):
+    def parseImpl(self,s,i):
         ret = []
         while True:
             match self.p.parse(s,i):
                 case Success(v,j):
-                    ret.append(v)
+                    if self.splicing:
+                        ret.extend(v)
+                    else:
+                        ret.append(v)
                     i = j
                 case _ as fail:
                     break
-        return Success(ret,i)
+        return Success(ret,i,self.splicing)
 
+
+def manys(p):
+    return Many(p,splicing=True)
+    
 
 class Opt(Parser):
 
     def __init__(self,p):
         self.p    = p
 
-    def parse(self,s,i):
+    def parseImpl(self,s,i):
         match self.p.parse(s,i):
             case Success() as succ:
                 return succ
@@ -130,7 +172,7 @@ class Recursive(Parser):
     def __init__(self):
         self.p    = None
 
-    def parse(self,s,i):
+    def parseImpl(self,s,i):
         return self.p.parse(s,i)
 
     def defined(self,q):
@@ -143,7 +185,7 @@ class Empty(Parser):
     def __init__(self,c=None):
         self.c    = c
 
-    def parse(self,s,i):
+    def parseImpl(self,s,i):
         return Success(self.c,i)
 
 
@@ -156,7 +198,7 @@ class StrP(Parser):
     def __init__(self,str):
         self.str = str
 
-    def parse(self,s,i):
+    def parseImpl(self,s,i):
         pos = i+len(self.str)
         if s[i:i+len(self.str)] == self.str:
             return Success(self.str,pos)
@@ -169,7 +211,7 @@ class RegexpP(Parser):
         self.re = re.compile(str,**kwargs)
         self.group = group
 
-    def parse(self,s,i):
+    def parseImpl(self,s,i):
         if m := self.re.match(s,i):
             str = m.group(self.group)
             start,end = m.span(self.group)
