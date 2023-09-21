@@ -22,9 +22,9 @@ class Parser(abc.ABC):
                 case _ as fail:
                     return fail
         elif hasattr(self,"action") and self.action:
-            match self.parseImpl(seq,i):
+            match self.parseImpl(seq,i,sp):
                 case Success(v,j):
-                    return Success(self.action(v),j)
+                    return Success(self.action(v),j,sp)
                 case _ as fail:
                     return fail
         else:
@@ -74,8 +74,8 @@ class Seq(Parser):
         if isinstance(self.parsers,list):
             for p in self.parsers:
                 match p.parse(s,i):
-                    case Success(v,j):
-                        if self.splicing:
+                    case Success(v,j,sp):
+                        if sp and isinstance(v,list):
                             ret.extend(v)
                         else:
                             ret.append(v)
@@ -140,8 +140,8 @@ class Many(Parser):
         ret = []
         while True:
             match self.p.parse(s,i):
-                case Success(v,j):
-                    if self.splicing:
+                case Success(v,j,sp):
+                    if sp and isinstance(v,list):
                         ret.extend(v)
                     else:
                         ret.append(v)
