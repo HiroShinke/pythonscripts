@@ -376,10 +376,27 @@ hello, world
 goodby america
 """
                   )
-        cmd_stdout("git checkout master --merge hello.txt")
 
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby america
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m C')
+
+
+        cmd_stdout("git merge HEAD")
         cmd_stdout("cat hello.txt",print_=True)
 
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
 
     def test_merge1(self):
 
