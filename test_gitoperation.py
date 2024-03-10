@@ -398,6 +398,49 @@ goodby america
 """
                          ,ret)
 
+
+        cmd_stdout("git checkout b3db10b")
+        self.assertEqual("""\
+hello, world
+goodby japan
+"""
+                         ,cmd_stdout("cat hello.txt"))
+
+        self.assertEqual("""\
+* (HEAD detached at b3db10b)
+  master
+"""
+                         ,cmd_stdout("git branch -a"))
+
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby england
+"""
+                  )
+
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m C2')
+
+        cmd_stdout("git branch c2")
+        cmd_stdout("git checkout c2")        
+        self.assertEqual("""\
+* c2
+  master
+"""
+                        ,cmd_stdout("git branch -a"))
+
+
+        ret = cmd_stdout("git log --graph --abbrev-commit --oneline")
+        self.assertEqual("""\
+* 249145c C2
+* b3db10b B
+* 70809e4 A
+"""
+                         ,ret)
+
+                  
     def test_merge1(self):
 
         os.environ["GIT_AUTHOR_DATE"] = "Fri May 5 20:30:55 2023 +0900"
