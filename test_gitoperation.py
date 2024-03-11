@@ -1394,6 +1394,76 @@ goodby europe
                          ,cmd_stdout("git log --graph --abbrev-commit --oneline"))
 
 
+    def test_cherrypick(self):
+
+        os.environ["GIT_AUTHOR_DATE"] = "Fri May 5 20:30:55 2023 +0900"
+        os.environ["GIT_COMMITTER_DATE"] = "Fri May 5 20:30:55 2023 +0900"
+        
+        make_file("hello.txt","""\
+hello, world
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m A')
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+"""
+                  )
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m B')
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby america
+"""
+                  )
+
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m C')
+
+
+        make_file("hello.txt","""\
+hello, world
+goodby japan
+goodby america
+goodby europe
+"""
+                  )
+
+        cmd_stdout("git add hello.txt")
+        cmd_stdout('git commit -m D')
+
+        self.assertEqual("""\
+* 36da5b2 D
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,cmd_stdout("git log --graph --abbrev-commit --oneline"))
+
+        cmd_stdout('git branch new-topic 70809e4')
+        cmd_stdout('git checkout new-topic')
+        cmd_stdout('git cherry-pick b3db10b 40c9072 36da5b2')
+
+        self.assertEqual("""\
+hello, world
+goodby japan
+goodby america
+goodby europe
+"""
+                         ,cmd_stdout("cat hello.txt"))
+
+        self.assertEqual("""\
+* 36da5b2 D
+* 40c9072 C
+* b3db10b B
+* 70809e4 A
+"""
+                         ,cmd_stdout("git log --graph --abbrev-commit --oneline"))
+
         
 if __name__ == "__main__":
     unittest.main()
