@@ -58,14 +58,13 @@ def pty_exec(cmd,keyseq=None):
     
     try:
         if keyseq:
-            bytes = convert_bytes(keyseq)
             print(f"keyseq = {bytes}",file=sys.stderr)
-            os.write(master,bytes)
+            os.write(master,keyseq)
     
         while ret := os.read(sys.stdin.fileno(),1024):
             os.write(master,ret)
 
-    except Exception as e:
+    except InterruptedError:
         pass
     
     os.close(master)
@@ -74,7 +73,6 @@ def pty_exec(cmd,keyseq=None):
     termios.tcsetattr(sys.stdout.fileno(),termios.TCSANOW,attrbk)
     
 
-
 def main():
 
     parser = argparse.ArgumentParser()
@@ -82,7 +80,12 @@ def main():
     parser.add_argument("--cmd")
     args = parser.parse_args()
 
-    pty_exec(args.cmd,args.keyseq)
+    if args.keyseq:
+        keyseq = convert_bytes(args.keyseq)
+    else:
+        keyseq = None
+
+    pty_exec(args.cmd,keyseq)
     
 
 if __name__ == "__main__":

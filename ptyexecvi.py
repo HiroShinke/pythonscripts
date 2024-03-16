@@ -9,6 +9,8 @@ import termios
 import fcntl
 import array
 import argparse
+import re
+import signal
 
 def setecho(fd,enable):
     attr = termios.tcgetattr(fd)
@@ -20,7 +22,11 @@ def setecho(fd,enable):
 
 def convert_bytes(str):
     return str.encode().decode("unicode-escape").encode()
-    
+
+def handler(signal,frame):
+    # print("Sub Porcess exit",file=sys.stderr)
+    raise InterruptedError()
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -46,10 +52,12 @@ def main():
             os.write(sys.stdout.fileno(),ret)
 
         os.close(master)
+        os.kill(os.getppid(),signal.SIGTERM)
         os._exit(0)
             
     tty.setraw(sys.stdin.fileno())
-
+    signal.signal(signal.SIGTERM,handler)
+    
     try:
         if args.keyseq:
             bytes = convert_bytes(args.keyseq)
@@ -59,7 +67,7 @@ def main():
         while ret := os.read(sys.stdin.fileno(),1024):
             os.write(master,ret)
 
-    except Exception as e:
+    except InterruptedError:
         pass
     
     os.close(master)
