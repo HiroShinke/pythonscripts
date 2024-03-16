@@ -73,7 +73,7 @@ def main():
     os.close(master)
     ret = p.wait()
 
-    termios.tcsetattr(sys.stdout.fileno(),termios.TCSANOW,attrbk)
+    termios.tcsetattr(sys.stdin.fileno(),termios.TCSANOW,attrbk)
                       
 
 if __name__ == "__main__":
