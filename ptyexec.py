@@ -70,7 +70,7 @@ def pty_exec(cmd,keyseq=None):
     os.close(master)
     ret = p.wait()
 
-    termios.tcsetattr(sys.stdout.fileno(),termios.TCSANOW,attrbk)
+    termios.tcsetattr(sys.stdin.fileno(),termios.TCSANOW,attrbk)
     
 
 def main():
